@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RemindiClock Setup</title>
+  <!-- Kritische Minimal-Styles sofort inline damit Wizard nicht unformatiert erscheint -->
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:#0d1117;color:#e6edf3;-webkit-font-smoothing:antialiased}
+    h1{font-size:1.4rem;margin:.4rem 0 1rem;font-weight:600;letter-spacing:.5px}
+    .wizard{max-width:560px;margin:0 auto;padding:1.25rem 1.25rem 2rem}
+    button{cursor:pointer;border:none;background:#ff9800;color:#000;font-weight:600;padding:.7em 1.1em;border-radius:10px;display:inline-flex;align-items:center;gap:.55em;font-size:.9rem}
+    button.secondary{background:#161b22;color:#e6edf3}
+    button.secondary:hover{background:#222a35}
+    label.field{display:grid;gap:.35rem;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:.9rem}
+    label.field input, label.field select{padding:.65em .8em;border-radius:10px;background:#121921;border:1px solid #24303c;color:#e6edf3}
+    label.field input:focus, label.field select:focus{outline:none;border-color:#ff9800;box-shadow:0 0 0 3px rgb(255 152 0 / .3)}
+    .card{background:#1f242d;padding:1.05rem 1.15rem;border-radius:14px;margin-bottom:1rem;box-shadow:0 4px 12px -4px rgba(0,0,0,.6)}
+    .steps{display:flex;justify-content:center;gap:.4rem;margin:1rem 0 1.2rem}
+    .steps span{width:10px;height:10px;border-radius:50%;background:#25313d}
+    .steps span.active{background:#ff9800}
+    .actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+    .divider{height:1px;background:#25313d;margin:1.1rem 0}
+    p{line-height:1.4;margin:.6rem 0}
+  </style>
+  <link rel="stylesheet" href="style.css?v=1" />
+</head>
+<body>
+  <div id="app"></div>
+  <template id="tpl-loading">
+    <div class="center">
+      <h1>RemindiClock</h1>
+      <p>Lade...</p>
+    </div>
+  </template>
+  <script>
+    // Cache-Busting: hängt eine Version (Build-Zeitstempel) an, falls noch kein Parameter vorhanden
+    (function(){
+      var v = Date.now();
+      var s = document.createElement('script');
+      s.src = 'script.js?v='+v;
+      document.currentScript.after(s);
+    })();
+  </script>
+</body>
+</html>
