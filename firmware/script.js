@@ -541,7 +541,7 @@
     if(st.metadataVersion){
       box.appendChild(h('div',{class:'kv'},h('strong',{},'Verfügbare Version: '),h('span',{},st.metadataVersion)));
     } else {
-      box.appendChild(h('p',{},'Kein Update verfügbar.'));
+      box.appendChild(h('p',{},'Kein Update verfügbar. Version 0.3.2 ist aktuell.'));
     }
     if(st.changelog){
       box.appendChild(h('details',{},h('summary',{},'Changelog anzeigen'), h('pre',{style:'white-space:pre-wrap;font-size:0.75rem;'}, st.changelog)));
@@ -553,7 +553,7 @@
     if(localStorage.getItem('rcPendingUpdateTarget')){
       box.appendChild(h('p',{class:'small'},'Update läuft – Bitte warten, Gerät startet neu...'));
     }
-    return card('OTA Update', box);
+    return card('Software Update', box);
   }
   async function loadOTAStatus(){ try { const s=await api('/api/ota/status'); State.otaStatus=s; } catch(e){} render(); }
   async function startOTAUpdate(btn,targetVersion){
