@@ -26,6 +26,7 @@
     scanning:false,
     step:0,
     wizardMode:true,
+  skipWaste:false, // Nutzer hat Abfall-Schritt übersprungen
   waitWasteImport:false,
     toasts:[],
     connected:false,
@@ -47,6 +48,10 @@
   ,draftSingle:{name:'',date:'',color:'#ff8800'}
   ,draftSeries:{name:'',recur:'weekly',monthly_pos:'',weekdays:[],color:'#33aaff'}
   ,mqttNeedsRestart:false
+  ,rebootWatching:false
+  ,reimportInProgress:false
+  ,otaStatus:null
+  ,otaTimer:null
   };
 
   // ---- Farbpalette & Helfer (mobile freundlich) ----
@@ -151,9 +156,9 @@
   wrap.appendChild(h('p',{},'Adresse bestimmt Zeitzone, Wetter- und Abfall-Region.'));
       if(State.dashboard){
         wrap.appendChild(h('div',{class:'card'},
-          h('p',{},'Verbindung erfolgreich. Erreichbar unter:'),
+          h('p',{},'WLAN-Verbindung erfolgreich. Gerät erreichbar unter:'),
           h('ul',{},
-            h('li',{},'mDNS: http://'+(State.dashboard.hostname? State.dashboard.hostname.toLowerCase() : 'remindiclock')+'.local'),
+            h('li',{},'http://'+(State.dashboard.hostname? State.dashboard.hostname.toLowerCase() : 'remindiclock')),
             h('li',{},'IP: '+(State.dashboard.ip||'-'))
           ),
           h('p',{class:'small muted'},'Füge die Seite am besten jetzt zu deinen Favoriten hinzu.')
@@ -195,13 +200,13 @@
       wrap.appendChild(form);
     } else if(State.step===2){
       wrap.appendChild(h('h1',{},'Abfallkalender'));
-      wrap.appendChild(h('p',{},'Optional: iCal Link des regionalen Entsorgers einrichten.'));
+      wrap.appendChild(h('p',{},'iCal Link des regionalen Entsorgers einrichten.'));
       // Region Hinweis basierend auf PLZ / Stadt
       if(State.dashboard){
         const plz=State.dashboard.postalCode||''; const city=State.dashboard.city||'';
         wrap.appendChild(h('div',{class:'card'},
           h('p',{},'Erkannte Region: '+(plz?plz+' ':'')+city),
-          h('p',{class:'small muted'},'Klicke den Anbieter-Link, erstelle/öffne den iCal Download und kopiere die URL oder lade die Datei herunter.')
+          h('p',{class:'small muted'},'Klicke den Anbieter-Link, kopiere deine erzeugte iCal URL und füge diese im Formular unten ein.')
         ));
         if(State.dashboard.wasteProviderName){
           wrap.appendChild(h('div',{class:'card'},
@@ -219,7 +224,14 @@
   if(!State.wasteIcalDraft && State.dashboard?.wasteIcalUrl) State.wasteIcalDraft=State.dashboard.wasteIcalUrl;
   const form=h('form',{onsubmit:e=>{e.preventDefault();saveWaste(form);}});
   form.appendChild(h('label',{class:'field'},'iCal URL',h('input',{name:'url',type:'url',placeholder:'https://...',value:State.wasteIcalDraft||'',oninput:e=>{State.wasteIcalDraft=e.target.value;}})));
-    form.appendChild(h('div',{class:'actions'},h('button',{type:'submit'}, State.dashboard?.wasteIcalUrl?'Neu laden':'Importieren')));
+    // Aktionen: Importieren + Überspringen nebeneinander (Skip nur wenn noch nicht bestätigt)
+    const actionChildren=[ h('button',{type:'submit'}, State.dashboard?.wasteIcalUrl?'Neu laden':'Importieren') ];
+    if(!State.dashboard?.wasteConfirmed){
+      actionChildren.push(
+  h('button',{type:'button',class:'secondary',onclick:()=>{ if(!State.skipWaste){ State.skipWaste=true; localStorage.setItem('rcSkipWaste','1'); } State.step=3; State.view=null; render(); }},'Überspringen')
+      );
+    }
+    form.appendChild(h('div',{class:'actions'}, actionChildren));
     wrap.appendChild(form);
     // Color selection (only if events present)
     if(State.dashboard?.wasteEvents){
@@ -263,18 +275,18 @@
       wrap.appendChild(colorForm);
     }
     if(!State.dashboard?.wasteConfirmed){
-      wrap.appendChild(h('div',{class:'card'},h('p',{class:'small muted'},'Bearbeiten der einzelnen Termin kann später in den Einstellungen erfolgen.')));
+      wrap.appendChild(h('div',{class:'card'},h('p',{class:'small muted'},'Bearbeiten der einzelnen Farben kann später in den Einstellungen erfolgen.')));
     } else {
       wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{State.step=3;render();}},'Weiter')));
     }
     // Wenn bereits importiert oder gerade import läuft -> Tabelle anzeigen sobald Events da
     if(State.dashboard?.wasteEvents){
       const cats=[
-        {k:'bio',label:'Bio'},
+        {k:'bio',label:'Bioabfall'},
         {k:'residual',label:'Restmüll'},
         {k:'paper',label:'Papier'},
-        {k:'packaging',label:'Verpackung (Gelb)'},
-        {k:'green',label:'Garten'}
+        {k:'packaging',label:'Verpackung (Gelber Sack / Tonne)'},
+        {k:'green',label:'Gartenschnitt'}
       ];
       const tbl=h('div',{class:'card'});
       tbl.appendChild(h('header',{},h('h3',{},'Gefundene Termine')));
@@ -289,7 +301,7 @@
     }
   } else if(State.step===3){
       wrap.appendChild(h('h1',{},'Termine & Geburtstage'));
-      wrap.appendChild(h('p',{},'Optional: Lege wiederkehrende oder einzelne Termine sowie Geburtstage an. Dies kann auch später in den Einstellungen erfolgen.'));
+      wrap.appendChild(h('p',{},'Lege wiederkehrende oder einzelne Termine sowie Geburtstage an. Dies kann auch später in den Einstellungen erfolgen.'));
       // Simple inline forms (reuse helper builders later in settings view)
       const section=h('div',{class:'grid'});
       // Birthday form
@@ -358,7 +370,7 @@
     } else if(State.step===4){
       // New markets step (BTC / MSCI)
       wrap.appendChild(h('h1',{},'Börsenkurse'));
-      wrap.appendChild(h('p',{},'Optional: Aktiviert automatische Anzeige der Wörter BTC bzw. MSCI auf der Uhr, wenn die Tagesveränderung > ±0.5% gegenüber dem Vortag ist.'));
+      wrap.appendChild(h('p',{},'Aktivierte die Anzeige der Bitcoin oder MSCI World ETF Kursänderungen. Die Anzeige erfolgt bei Tagesveränderung > ±0.5% gegenüber dem Vortag.'));
       const form=h('form',{onsubmit:e=>{e.preventDefault(); saveMarkets(form); }});
       const btcSel=h('select',{name:'btc'},
         h('option',{value:'off'},'Deaktiviert'),
@@ -378,7 +390,7 @@
       wrap.appendChild(form);
     } else if(State.step===5){
       wrap.appendChild(h('h1',{},'Fertig'));
-      wrap.appendChild(h('p',{},'Konfiguration abgeschlossen.'));
+      wrap.appendChild(h('p',{},'Die Konfiguration deiner Remindi-Clock ist abgeschlossen.'));
       wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{ localStorage.setItem('rcWizardDone','1'); State.wizardMode=false; State.view='Dashboard'; render(); }},'Zum Dashboard')));
     }
   app.appendChild(wrap);
@@ -426,25 +438,33 @@
 
   function viewDashboard(){
     const g=h('div',{class:'cards'});
-    g.appendChild(card('Gerätestatus',h('div',{},
-      statusLine('Uhr',State.dashboard?.online),
-      statusLine('Aktuelle Zeit', State.dashboard?.time||'--:--'),
-      (State.dashboard?.phrase? statusLine('Wort-Zeit', State.dashboard.phrase): h('div')),
-      statusLine('Firmware', State.dashboard?.version||'?')
-    )));
-    g.appendChild(card('Services',h('div',{},
-      statusLine('Wetter',State.dashboard?.weather? (State.dashboard.weather + (State.dashboard.temperature!=null? ' ('+State.dashboard.temperature+'°C)':'')) : State.dashboard?.weather),
-  statusLine('Abfallkalender',State.dashboard?.waste),
-      statusLine('MQTT',State.dashboard?.mqtt),
-      statusLine('Geburtstage',State.dashboard?.birthdays)
-    ),h('button',{class:'secondary',onclick:refreshDashboard},'Aktualisieren')));
-    g.appendChild(card('LED',h('div',{},
-      statusLine('Helligkeit',State.dashboard?.brightness!=null? State.dashboard.brightness+'%':'?'),
-      statusLine('Nachtmodus',State.dashboard?.nightMode? 'Aktiv':'Aus'),
-      statusLine('Farbe',State.dashboard?.color||'#ffffff')
-    )));
+    // Anzeige Box
+    const tagsWrap=h('div',{class:'tags'});
+    if(State.dashboard?.extra && Array.isArray(State.dashboard.extra)){
+      State.dashboard.extra.forEach(w=>{
+        const tag=h('span',{class:'word-tag',style:'--col:'+(w.color||'#444')},w.name);
+        tagsWrap.appendChild(tag);
+      });
+      if(!State.dashboard.extra.length){ tagsWrap.appendChild(h('span',{class:'muted'},'Keine Zusatzwörter aktiv')); }
+    } else {
+      tagsWrap.appendChild(h('span',{class:'muted'},'Keine Daten'));
+    }
+    const phraseEl=h('div',{class:'phrase'}, State.dashboard?.phrase || '—');
+    g.appendChild(card('Anzeige',h('div',{}, phraseEl, tagsWrap)));
+    // Services Box mit grünen/roten Kreisen
+    const services=h('div',{},
+      serviceLine('Uhrzeit', State.dashboard?.timeSync),
+      serviceLine('Wetter', State.dashboard?.weather_ok),
+      serviceLine('Termine', State.dashboard?.birthdays),
+      serviceLine('Abfallkalender', State.dashboard?.waste_ok),
+      serviceLine('Börse BTC', State.dashboard?.btc_ok),
+      serviceLine('Börse MSCI', State.dashboard?.msci_ok),
+      serviceLine('MQTT', State.dashboard?.mqtt)
+    );
+    g.appendChild(card('Services', services, h('button',{class:'secondary',onclick:refreshDashboard},'Aktualisieren')));
     return g;
   }
+  function serviceLine(label,ok){ return h('div',{class:'inline'},statusDot(ok===true),h('span',{},label)); }
   function statusLine(label,val){
     let ok=null; if(typeof val==='boolean') ok=val; if(label==='Aktuelle Zeit') ok=val && val!=='--:--';
     return h('div',{class:'inline'},statusDot(ok),h('span',{},label+': '+(val==null?'?':val)));
@@ -490,7 +510,79 @@
     // Factory reset box
     const resetBox=h('div',{},h('p',{},'Alle Einstellungen löschen und Werkseinstellungen laden.'),h('button',{class:'danger',onclick:factoryResetConfirm},'Werkseinstellungen'));
     wrap.appendChild(card('Werkseinstellungen',resetBox));
+  // OTA Update Box
+  wrap.appendChild(buildOtaCard());
+    // UPDATE Wort Toggle
+    const updMode = (d.updateWordMode)|| (d.weatherWords && d.weatherWords.UPDATE && d.weatherWords.UPDATE.mode) || 'auto';
+    const updWrap=h('div',{});
+    const btnRow=h('div',{class:'inline-btns'});
+    function renderUpdBtns(){ btnRow.innerHTML=''; ['auto','disabled'].forEach(m=>{ btnRow.appendChild(h('button',{class:'mini'+(updWrap.dataset.mode===m?' active':''),onclick:()=>{ updWrap.dataset.mode=m; renderUpdBtns(); }}, m==='auto'?'AUTO':'AUS')); }); }
+    updWrap.dataset.mode=updMode==='disabled'?'disabled':'auto';
+    renderUpdBtns();
+    const saveBtn=h('button',{onclick:async()=>{
+      const mode=updWrap.dataset.mode;
+      try {
+        const payload={ UPDATE:{ enabled: mode==='auto' } };
+        await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify(payload)});
+        toast('UPDATE Wort gespeichert','success');
+        await refreshDashboard(true);
+      } catch(e){ toast('Fehler beim Speichern','error'); }
+    }},'Speichern');
+    updWrap.appendChild(h('p',{class:'small'},'Wort "UPDATE" anzeigen bei verfügbarem/aktivem Update.'));
+    updWrap.appendChild(btnRow);
+    updWrap.appendChild(h('div',{class:'actions'},saveBtn));
+    wrap.appendChild(card('Wort UPDATE', updWrap));
     return wrap;
+  }
+  function buildOtaCard(){
+    const box=h('div',{});
+    const st=State.otaStatus;
+    if(!st){ box.appendChild(h('p',{},'OTA Status wird geladen...')); loadOTAStatus(); return card('Software Update',box); }
+    if(st.metadataVersion){
+      box.appendChild(h('div',{class:'kv'},h('strong',{},'Verfügbare Version: '),h('span',{},st.metadataVersion)));
+    } else {
+      box.appendChild(h('p',{},'Kein Update verfügbar.'));
+    }
+    if(st.changelog){
+      box.appendChild(h('details',{},h('summary',{},'Changelog anzeigen'), h('pre',{style:'white-space:pre-wrap;font-size:0.75rem;'}, st.changelog)));
+    }
+    if(st.hasUpdate){
+      const btn=h('button',{class:'primary',onclick:()=>startOTAUpdate(btn,st.metadataVersion)},'Update installieren');
+      box.appendChild(h('div',{class:'actions'},btn));
+    }
+    if(localStorage.getItem('rcPendingUpdateTarget')){
+      box.appendChild(h('p',{class:'small'},'Update läuft – Bitte warten, Gerät startet neu...'));
+    }
+    return card('OTA Update', box);
+  }
+  async function loadOTAStatus(){ try { const s=await api('/api/ota/status'); State.otaStatus=s; } catch(e){} render(); }
+  async function startOTAUpdate(btn,targetVersion){
+    if(!confirm('Update auf Version '+targetVersion+' installieren?')) return;
+    const done=setLoading(btn);
+    try {
+      const prevVer=State.dashboard?.version||'';
+      if(targetVersion){
+        localStorage.setItem('rcPendingUpdateTarget',targetVersion);
+        localStorage.setItem('rcPendingUpdatePrev',prevVer);
+        localStorage.setItem('rcPendingUpdateTs',String(Date.now()));
+      }
+      const r=await fetch('/api/ota/firmware',{method:'POST'});
+      if(r.ok){
+        toast('Update gestartet – Bitte warten...');
+        btn.disabled=true; btn.textContent='Bitte warten...';
+        beginRebootWatch(true);
+      } else {
+        toast('Update Start fehlgeschlagen','error');
+        localStorage.removeItem('rcPendingUpdateTarget');
+        localStorage.removeItem('rcPendingUpdatePrev');
+        localStorage.removeItem('rcPendingUpdateTs');
+      }
+    } catch(e){
+      toast('Netzwerkfehler','error');
+      localStorage.removeItem('rcPendingUpdateTarget');
+      localStorage.removeItem('rcPendingUpdatePrev');
+      localStorage.removeItem('rcPendingUpdateTs');
+    } finally { done(); }
   }
   function lineKV(k,v){ return h('div',{class:'kv'},h('strong',{},k+': '),h('span',{},v)); }
   function rssiIcon(r){ if(r==null) return ''; let lvl=1; if(r>-55) lvl=4; else if(r>-65) lvl=3; else if(r>-75) lvl=2; else lvl=1; return ' '+['▂','▃','▅','█'][lvl-1]; }
@@ -507,97 +599,127 @@
   f.appendChild(h('label',{class:'field'},'Helligkeit',h('input',{type:'range',name:'brightnessPercent',min:1,max:100,value:pct,oninput:e=>{e.target.nextSibling.textContent=e.target.value+'%';}}),h('span',{},pct+'%')));
     const nightSel=h('select',{name:'night'},
       h('option',{value:'off'},'Aus'),
-      h('option',{value:'auto'},'Automatisch'),
       h('option',{value:'on'},'An')
     );
-    const currentNight=State.dashboard?.nightMode? 'on' : (State.dashboard?.nightMode===false? 'off' : (State.dashboard?.nightMode==='auto'?'auto':'off'));
-    setTimeout(()=>{ nightSel.value=currentNight; },0);
+    const currentNight = (State.dashboard?.nightModeRaw==='on')? 'on':'off';
+    setTimeout(()=>{ nightSel.value=currentNight; toggleNightFields(); },0);
     f.appendChild(h('label',{class:'field'},'Nachtmodus',nightSel));
-    const baseColor = (State.dashboard?.color && /^#?[0-9a-fA-F]{6}$/.test(State.dashboard.color))? (State.dashboard.color.startsWith('#')? State.dashboard.color : '#'+State.dashboard.color) : '#ffffff';
-    f.appendChild(h('label',{class:'field'},'Grundfarbe',h('input',{type:'color',name:'color',value:baseColor})));
+    // Night schedule fields
+    const nfWrap = h('div',{class:'night-fields'});
+    const nh = State.dashboard?.nightStartHour ?? 22;
+    const nm = State.dashboard?.nightStartMinute ?? 0;
+    const eh = State.dashboard?.nightEndHour ?? 6;
+    const em = State.dashboard?.nightEndMinute ?? 0;
+    const nb = State.dashboard?.nightBrightness ?? 30;
+    nfWrap.appendChild(h('label',{class:'field'},'Start (HH:MM)',
+      h('input',{type:'number',name:'nightStartHour',min:0,max:23,value:nh,style:'width:70px'}),
+      h('input',{type:'number',name:'nightStartMinute',min:0,max:59,value:nm,style:'width:70px'})));
+    nfWrap.appendChild(h('label',{class:'field'},'Ende (HH:MM)',
+      h('input',{type:'number',name:'nightEndHour',min:0,max:23,value:eh,style:'width:70px'}),
+      h('input',{type:'number',name:'nightEndMinute',min:0,max:59,value:em,style:'width:70px'})));
+    nfWrap.appendChild(h('label',{class:'field'},'Nacht-Helligkeit',h('input',{type:'range',name:'nightBrightness',min:1,max:255,value:nb,oninput:e=>{e.target.nextSibling.textContent=e.target.value;} }),h('span',{},nb)));
+    f.appendChild(nfWrap);
+    nightSel.onchange=()=>{ toggleNightFields(); };
+    function toggleNightFields(){ nfWrap.style.display = (nightSel.value==='on')? 'block':'none'; }
+  const baseColor = (State.dashboard?.color && /^#?[0-9a-fA-F]{6}$/.test(State.dashboard.color))? (State.dashboard.color.startsWith('#')? State.dashboard.color : '#'+State.dashboard.color) : '#ffffff';
+  f.appendChild(h('label',{class:'field'},'Uhrzeit',h('input',{type:'color',name:'color',value:baseColor}))); // renamed
     c.appendChild(card('LED Einstellungen',f,h('button',{type:'submit'},'Übernehmen')));
-    const extraWords=['REGEN','SCHNEE','WIND','ABFALL','GEBURTSTAG','TERMIN','GIESSEN','LUEFTEN'];
-    const palette=['#ffffff','#ff9800','#ff0000','#00ff00','#0000ff','#ffff00','#00ffff','#ff00ff','#00bfff'];
-    const ewrap=h('div',{class:'color-palette'});
-    extraWords.forEach(w=>{
-      const row=h('div',{class:'pal-row'}, h('span',{class:'pal-label'},w));
-      palette.forEach(col=>{
-        row.appendChild(h('button',{type:'button',class:'swatch',style:'--c:'+col,onclick:(ev)=>{row.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel')); ev.target.classList.add('sel'); row.dataset.sel=col;}},''));
-      });
-      const custom=h('input',{type:'color',value:'#ffffff',oninput:e=>{row.dataset.sel=e.target.value; row.querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel'));}});
-      row.appendChild(custom);
-      // Preselect from server if available
-      const srv=(State.dashboard?.extraColors||State.dashboard?.extraWordColors)||{};
-      let keyVariants=[w,w.toLowerCase(),'color_'+w,'color_'+w.toLowerCase()];
-      let srvCol=null; for(const kv of keyVariants){ if(srv[kv]){ srvCol=srv[kv]; break; } }
-      if(srvCol){
-        if(!srvCol.startsWith('#') && /^([0-9A-Fa-f]{6})$/.test(srvCol)) srvCol='#'+srvCol;
-        srvCol=srvCol.toLowerCase();
-        const btn=[...row.querySelectorAll('.swatch')].find(b=> b.style.getPropertyValue('--c').toLowerCase()===srvCol);
-        if(btn){ btn.classList.add('sel'); row.dataset.sel=srvCol; }
-        else { custom.value=srvCol; row.dataset.sel=srvCol; }
-      }
-      ewrap.appendChild(row);
-    });
-    c.appendChild(card('Farben Zusatzwörter',ewrap,h('button',{class:'secondary',onclick:()=>saveExtraColors(ewrap)},'Speichern')));
+  // Removed 'Farben Zusatzwörter' card per request
     return c;
   }
 
   function viewWeather(){
-    const f=h('form',{onsubmit:e=>{e.preventDefault();saveWeather(f);}});
-    f.appendChild(field('API Key','apiKey','text',State.dashboard?.weatherApiKey||''));
-    f.appendChild(field('Adresse','address','text',State.dashboard?.address||''));
-    f.appendChild(field('Intervall (min)','interval','number',30));
-    return card('Wetter API',f,h('button',{type:'submit'},'Speichern'));
+    // Neue UI: Konfiguration Auto-Wetter-Wörter (Farben + enable/disable) analog Kategorie-Farben Layout
+    const defs={REGEN:'#0000FF',SCHNEE:'#FFFFFF',WIND:'#FFFF00',LUEFTEN:'#00BFFF',GIESSEN:'#0000FF'};
+    const order=['REGEN','SCHNEE','WIND','LUEFTEN','GIESSEN'];
+    const f=h('form',{onsubmit:e=>{e.preventDefault();saveWeatherWords(f);}});
+    order.forEach(k=>{
+      let col=defs[k]; let mode='auto';
+      if(State.dashboard?.weatherWords && State.dashboard.weatherWords[k]){
+        const ww=State.dashboard.weatherWords[k];
+        if(ww.color && /^#?[0-9a-fA-F]{6}$/.test(ww.color)) col= ww.color.startsWith('#')? ww.color : '#'+ww.color;
+        if(ww.mode) mode=ww.mode;
+      }
+      const row=h('div',{class:'field weather-word-row'},
+        h('span',{style:'min-width:110px;display:inline-block;font-weight:600;'},k),
+        h('input',{type:'color',name:k+'_col',value:col}),
+        (function(){
+          const wrap=h('span',{class:'mode-buttons',style:'margin-left:8px;display:inline-flex;gap:4px;'});
+          function makeBtn(label,val){
+            const active=(mode==='auto'&&val==='auto')||(mode!=='auto'&&val==='disabled'&&mode==='disabled');
+            return h('button',{type:'button','data-word':k,'data-mode':val,class:active?'mini active':'mini',onclick:()=>{ setMode(k,val,wrap); }},label);
+          }
+          wrap.appendChild(makeBtn('AUTO','auto'));
+          wrap.appendChild(makeBtn('AUS','disabled'));
+          return wrap;
+        })()
+      );
+      f.appendChild(row);
+    });
+    function setMode(word,mode,wrap){
+      // toggle button styles
+      const btns=wrap.querySelectorAll('button'); btns.forEach(b=>{ b.classList.remove('active'); if(b.getAttribute('data-mode')===mode) b.classList.add('active'); });
+      // store selection in hidden input
+      let hidden=f.querySelector('input[name="'+word+'_mode"]'); if(!hidden){ hidden=h('input',{type:'hidden',name:word+'_mode'}); f.appendChild(hidden); }
+      hidden.value=mode;
+    }
+    // Initialize hidden inputs according to initial modes
+    order.forEach(k=>{ let m='auto'; if(State.dashboard?.weatherWords && State.dashboard.weatherWords[k] && State.dashboard.weatherWords[k].mode) m=State.dashboard.weatherWords[k].mode; let hidden=h('input',{type:'hidden',name:k+'_mode',value:(m==='auto'?'auto':'disabled')}); f.appendChild(hidden); });
+    f.appendChild(h('button',{type:'submit'},'Speichern'));
+    return card('Wetter Wörter (Auto-Modus)',f);
   }
 
   function viewWaste(){
     const wrap=h('div',{class:'grid'});
-  if(!State.wasteIcalDraft && State.dashboard?.wasteIcalUrl) State.wasteIcalDraft=State.dashboard.wasteIcalUrl;
-  const importForm=h('form',{onsubmit:e=>{e.preventDefault();importWaste(importForm);}});
-  importForm.appendChild(h('label',{class:'field'},'iCAL URL',h('input',{name:'ical',type:'text',placeholder:'https://...',value:State.wasteIcalDraft||'',oninput:e=>{State.wasteIcalDraft=e.target.value;}})));
-  wrap.appendChild(card('Abfallkalender Import',importForm,h('button',{type:'submit'},'Importieren')));
-    if(State.dashboard?.wasteProviderName || State.dashboard?.wasteProviderSearchUrl){
-      const provBox=h('div',{});
-      if(State.dashboard.wasteProviderName){
-        provBox.appendChild(h('p',{},'Entsorger: '+State.dashboard.wasteProviderName+' ', h('a',{href:State.dashboard.wasteProviderUrl,target:'_blank'},'(Website)')));
-      }
-      if(State.dashboard.wasteProviderSearchUrl){
-        provBox.appendChild(h('p',{},h('a',{href:State.dashboard.wasteProviderSearchUrl,target:'_blank'},'Alternative Suche öffnen')));
-      }
-      wrap.appendChild(card('Hilfe bei iCal Suche',provBox));
+    // ABFALL Wort Modus (auto/disabled)
+    const awMode=(State.dashboard?.weatherWords && State.dashboard.weatherWords.ABFALL && State.dashboard.weatherWords.ABFALL.mode) ? State.dashboard.weatherWords.ABFALL.mode : 'auto'; // fallback
+    // Da ABFALL Teil der ExtraWords ist, holen wir Modus indirekt über /api/words Dashboard? Falls nicht vorhanden -> annehmen auto
+    let abfallMode='auto';
+    if(State.dashboard && State.dashboard.extra){
+      // Kein direkter Modus enthalten; ignorieren -> lassen hidden Input auf 'auto'
     }
-    const status=h('div',{},h('p',{},'Status: '+(State.dashboard?.waste?'Aktiv':'Nicht importiert')));
-    // Color picker
-    const colorForm=h('form',{onsubmit:e=>{e.preventDefault();saveWasteColor(colorForm);}});
-    const wc=State.dashboard?.wasteColor || '#00ff00';
-    colorForm.appendChild(h('label',{class:'field'},'Wortfarbe ABFALL',h('input',{type:'color',name:'color',value:wc.length===7?wc:'#00ff00'})));
-    wrap.appendChild(card('Status',status));
-    wrap.appendChild(card('Farbe',colorForm,h('button',{type:'submit'},'Speichern')));
+    const awForm=h('form',{onsubmit:e=>{e.preventDefault();saveAbfallMode(awForm);}});
+    const modeWrap=h('div',{class:'field weather-word-row'},
+      h('span',{style:'min-width:110px;display:inline-block;font-weight:600;'},'ABFALL'),
+      (function(){
+        const wrapB=h('span',{class:'mode-buttons',style:'margin-left:4px;display:inline-flex;gap:4px;'});
+        function make(label,val){ return h('button',{type:'button','data-mode':val,class: (abfallMode==='auto'&&val==='auto')||(abfallMode==='disabled'&&val==='disabled')?'mini active':'mini',onclick:()=>setAbfallMode(val,wrapB)},label); }
+        wrapB.appendChild(make('AUTO','auto'));
+        wrapB.appendChild(make('AUS','disabled'));
+        return wrapB;
+      })()
+    );
+    awForm.appendChild(modeWrap);
+    awForm.appendChild(h('input',{type:'hidden',name:'abfall_mode',value:abfallMode}));
+    awForm.appendChild(h('button',{type:'submit'},'Speichern'));
+    wrap.appendChild(card('ABFALLKALENDER',awForm));
     // Neue: Einzelne Farben für Kategorien bearbeiten (bio, residual, paper, packaging, green)
     const catColorForm=h('form',{onsubmit:e=>{e.preventDefault();saveWasteColors(catColorForm);}});
     const catInputs=[
-      {name:'bio', label:'Bio', val:State.dashboard?.wasteColorBio},
+      {name:'bio', label:'Bioabfall', val:State.dashboard?.wasteColorBio},
       {name:'residual', label:'Restmüll', val:State.dashboard?.wasteColorResidual},
       {name:'paper', label:'Papier', val:State.dashboard?.wasteColorPaper},
-      {name:'packaging', label:'Verpackung (Gelb)', val:State.dashboard?.wasteColorPackaging},
-      {name:'green', label:'Garten', val:State.dashboard?.wasteColorGreen}
+      {name:'packaging', label:'Verpackung (Gelber Sack / Tonne)', val:State.dashboard?.wasteColorPackaging},
+      {name:'green', label:'Gartenschnitt', val:State.dashboard?.wasteColorGreen}
     ];
     catInputs.forEach(c=>{
       const v=(c.val && c.val.length===7)? c.val : '#ffffff';
       catColorForm.appendChild(h('label',{class:'field'},c.label,h('input',{type:'color',name:c.name,value:v})));
     });
     wrap.appendChild(card('Kategorie-Farben',catColorForm,h('button',{type:'submit'},'Alle speichern')));
-    // Events table if available
-    if(State.dashboard?.wasteEvents){
+    // Events table or import form if empty
+    const hasEvents = !!State.dashboard?.wasteEvents && Object.values(State.dashboard.wasteEvents).some(v=>Array.isArray(v)&&v.length);
+    if(hasEvents){
       const cats=[
-        {k:'bio',label:'Bio'},
+        {k:'bio',label:'Bioabfall'},
         {k:'residual',label:'Restmüll'},
         {k:'paper',label:'Papier'},
-        {k:'packaging',label:'Verpackung (Gelb)'},
-        {k:'green',label:'Garten'}
+        {k:'packaging',label:'Verpackung (Gelber Sack / Tonne)'},
+        {k:'green',label:'Gartenschnitt'}
       ];
-      const tbl=h('div',{class:'card'},h('header',{},h('h3',{},'Importierte Termine')));
+      const tbl=h('div',{class:'card'},h('header',{},h('h3',{},'Importierte Termine'),
+        h('div',{class:'actions',style:'margin-top:.5rem;'}, h('button',{class:'danger',onclick:()=>reimportWasteConfirm()},'Neue Termine importieren'))
+      ));
       cats.forEach(c=>{
         const arr=State.dashboard.wasteEvents[c.k]||[];
         if(!arr.length) return;
@@ -605,6 +727,13 @@
         tbl.appendChild(h('section',{},h('h4',{},c.label+' ('+arr.length+')'),list));
       });
       wrap.appendChild(tbl);
+    } else {
+      // Show inline iCal import when empty
+      const emptyImport=h('form',{onsubmit:e=>{e.preventDefault();saveWaste(e.target);}},
+        h('label',{class:'field'},'iCal URL',h('input',{name:'url',type:'url',required:true,placeholder:'https://...'})),
+        h('div',{class:'actions'},h('button',{type:'submit'},'Importieren'))
+      );
+      wrap.appendChild(card('Importierte Termine', h('div',{}, h('p',{class:'small muted'},'Keine Termine vorhanden. Bitte iCal URL importieren.'), emptyImport)));
     }
     return wrap;
   }
@@ -812,16 +941,18 @@
     try {
       const dash = await api('/api/dashboard');
       State.dashboard = dash;
-      if(State.wizardMode){
+  if(State.wizardMode){
         const st = dash.stage;
-        if(st==='wifi') State.step=0;
-        else if(st==='address') State.step=1;
-        else if(st==='waste') State.step=2;
-        else if(st==='done'){
-          if(localStorage.getItem('rcWizardDone')==='1') { State.wizardMode=false; State.view='Dashboard'; }
-          else {
-            // Mindest-Einstieg Schritt 3, aber nie zurücksetzen wenn Nutzer bereits auf Schritt 4 oder 5 ist
-            if(State.step < 3) State.step=3;
+    if(st==='wifi') State.step=0;
+    else if(st==='address') State.step=1;
+    else if(st==='waste' && !State.skipWaste) State.step=2; // nur anzeigen wenn nicht übersprungen
+    else if(st==='done'){
+          // Nur verlassen, wenn Nutzer wirklich final (Schritt 5) war oder gerade fertigstellt
+          const doneFlag = localStorage.getItem('rcWizardDone')==='1';
+          if(doneFlag && State.step>=5){
+            State.wizardMode=false; State.view='Dashboard';
+          } else {
+            if(State.step < 3) State.step=3; // in optionale Schritte wechseln
           }
         }
       }
@@ -832,9 +963,44 @@
     } catch(e) {}
     if(State.wizardMode) setTimeout(pollForStage,3000);
   }
-  async function refreshDashboard(force){
+  async function refreshDashboard(force, opts){
+  opts=opts||{}; const suppressWizard=!!opts.suppressWizard;
   const prevStage = State.dashboard?.stage;
   try { State.dashboard = await api('/api/dashboard'); } catch(e){ }
+    // OTA Erfolg / Fehlschlag über Versionsvergleich erkennen
+    try {
+      const tgt=localStorage.getItem('rcPendingUpdateTarget');
+      const prevVer=localStorage.getItem('rcPendingUpdatePrev');
+      const ts=parseInt(localStorage.getItem('rcPendingUpdateTs')||'0',10);
+      if(tgt && prevVer && State.dashboard?.version){
+        if(State.dashboard.version===tgt){
+          toast('Update installiert ('+tgt+')','success');
+          localStorage.removeItem('rcPendingUpdateTarget');
+          localStorage.removeItem('rcPendingUpdatePrev');
+          localStorage.removeItem('rcPendingUpdateTs');
+        } else if(State.dashboard.version!==prevVer && State.dashboard.version!==tgt){
+          // Version hat sich verändert, aber nicht identisch zum erwarteten Ziel -> trotzdem Erfolg melden
+          toast('Firmware geändert ('+State.dashboard.version+')','success');
+          localStorage.removeItem('rcPendingUpdateTarget');
+          localStorage.removeItem('rcPendingUpdatePrev');
+          localStorage.removeItem('rcPendingUpdateTs');
+        } else if(ts && Date.now()-ts>60000){
+          toast('Update fehlgeschlagen (Version unverändert)','error');
+          localStorage.removeItem('rcPendingUpdateTarget');
+          localStorage.removeItem('rcPendingUpdatePrev');
+          localStorage.removeItem('rcPendingUpdateTs');
+        }
+      }
+    }catch(_){ }
+    const stRe=State.dashboard?.stage;
+    // Nur bei Regression auf wifi / address Wizard forcieren (SPIFFS Reset Szenario), nicht bei waste nach Reimport
+    if(!suppressWizard && !State.wizardMode && localStorage.getItem('rcWizardDone')==='1' && stRe && stRe!=='done'){
+      if((stRe==='wifi' || stRe==='address')){
+        localStorage.removeItem('rcWizardDone');
+        State.wizardMode=true;
+        State.step = (stRe==='wifi')?0:1;
+      }
+    }
     let stepBefore=State.step; const newStage=State.dashboard?.stage;
     if(State.wizardMode){
       const st=State.dashboard?.stage;
@@ -843,15 +1009,16 @@
         else { State.step=2; }
       }
       if(!State.waitWasteImport){
-        if(st==='wifi'){ State.step=0; }
-        else if(st==='address'){ State.step=1; }
-        else if(st==='waste'){ State.step=2; }
-        else if(st==='done'){
-          if(localStorage.getItem('rcWizardDone')==='1'){
+    if(st==='wifi'){ State.step=0; }
+    else if(st==='address'){ State.step=1; }
+    else if(st==='waste' && !State.skipWaste){ State.step=2; }
+    else if(st==='done'){
+          const doneFlag = localStorage.getItem('rcWizardDone')==='1';
+          if(doneFlag && State.step>=5){
             State.wizardMode=false; State.view='Dashboard';
           } else {
-            if(!State.dashboard?.wasteConfirmed){ State.step=2; }
-            else if(State.step<3) State.step=3; // keep current (could be on later steps)
+            if(!State.dashboard?.wasteConfirmed && !State.skipWaste){ State.step=2; }
+            else if(State.step<3) State.step=3;
           }
         }
       }
@@ -879,13 +1046,29 @@
   }
   function startDashboardLoop(){ if(State.dashTimer) return; State.dashTimer=setInterval(()=>{ if(State.wizardMode) refreshDashboard(false); },5000);} 
   function stopDashboardLoop(){ if(State.dashTimer){ clearInterval(State.dashTimer); State.dashTimer=null; } }
-  async function factoryReset(){if(confirm('Wirklich zurücksetzen?')) { try { await api('/api/settings/factory-reset',{method:'POST'}); toast('Reset, Neustart...','warn'); } catch(e){} } }
+  async function factoryReset(){
+    // Zweite Sicherheitsabfrage (erste in factoryResetConfirm) bleibt für direkte Aufrufe bestehen
+    if(confirm('Wirklich zurücksetzen?')) {
+      try {
+        // Lokale Wizard-Flags sofort löschen, damit nach Reload Wizard wieder startet
+        localStorage.removeItem('rcWizardDone');
+        localStorage.removeItem('rcSkipWaste');
+        // UI direkt in Wizard-Modus versetzen (falls Gerät etwas verzögert neu startet)
+        State.wizardMode=true; State.skipWaste=false; State.step=0; State.view=null; render();
+        await api('/api/settings/factory-reset',{method:'POST'});
+        toast('Reset, Neustart...','warn');
+    beginRebootWatch(true);
+      } catch(e){ /* ignore */ }
+    }
+  }
   async function saveBrightness(form){
     const data=Object.fromEntries(new FormData(form).entries());
     const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn);
   try { await api('/api/settings/brightness',{method:'POST',body:JSON.stringify(data)}); toast('LED gespeichert','success');
     // Lokale Dashboard-Werte direkt anpassen
     if(State.dashboard){ const pct=parseInt(data.brightnessPercent||data.brightness||0,10); if(pct>0){ State.dashboard.rawBrightness = Math.round(pct*255/100); State.dashboard.brightness = pct; } }
+    // Farbe lokal übernehmen und sofort Dashboard + Anzeige aktualisieren (force render)
+    if(data.color){ let c=data.color; if(!c.startsWith('#')) c='#'+c; State.dashboard.color=c; }
     await refreshDashboard(true);
   } catch(e){ toast('Fehler','error'); } finally { done(); State.editingActive=false; }
   }
@@ -898,10 +1081,44 @@
   try{ await api('/api/settings/extra-colors',{method:'POST',body:JSON.stringify(out)}); toast('Farben gespeichert','success'); await refreshDashboard(true); }
     catch(e){ toast('Fehler beim Speichern','error'); } finally { done(); }
   }
-  async function saveWeather(form){ const data=Object.fromEntries(new FormData(form).entries()); const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); try{ await api('/api/settings/weather',{method:'POST',body:JSON.stringify(data)}); toast('Wetter gespeichert','success'); await refreshDashboard(true); }catch(e){ toast('Speichern fehlgeschlagen','error'); } finally { done(); State.editingActive=false; } }
+  async function saveWeatherWords(form){ const data=Object.fromEntries(new FormData(form).entries()); const payload={}; const map=[['REGEN','#0000FF'],['SCHNEE','#FFFFFF'],['WIND','#FFFF00'],['LUEFTEN','#00BFFF'],['GIESSEN','#0000FF']];
+    map.forEach(([k,def])=>{ const mode=(data[k+'_mode']||'auto'); let col=(data[k+'_col']||def); if(col && !col.startsWith('#')) col='#'+col; payload[k]={enabled:(mode==='auto'),color:col}; });
+    const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn);
+    try{ await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify(payload)}); toast('Gespeichert','success'); await refreshDashboard(true); }
+    catch(e){ toast('Speichern fehlgeschlagen','error'); } finally { done(); }
+  }
   async function importWaste(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.ical})}); toast('Kalender gespeichert','success'); State.waitWasteImport=true; State.step=2; State.wasteIcalDraft=d.ical; await refreshDashboard(); render(); let tries=0; const poll=async()=>{ tries++; await refreshDashboard(); if(State.dashboard?.wasteEvents || tries>8){ render(); } else setTimeout(poll,1200); }; poll(); }catch(e){ toast('Fehler beim Import','error'); } }
   async function saveWaste(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.url})}); toast('Abfall iCal gespeichert','success'); State.waitWasteImport=true; State.step=2; await refreshDashboard(); render(); let tries=0; const poll=async()=>{ tries++; await refreshDashboard(); if(State.dashboard?.wasteEvents || tries>8){ render(); } else setTimeout(poll,1200); }; poll(); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
   async function saveWasteColors(form){ const d=Object.fromEntries(new FormData(form).entries()); const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); try{ await api('/api/waste/colors',{method:'POST',body:JSON.stringify(d)}); toast('Farben gespeichert','success'); await refreshDashboard(); render(); }catch(e){ toast('Fehler beim Speichern','error'); } finally { done(); } }
+  async function saveAbfallMode(form){ const d=Object.fromEntries(new FormData(form).entries()); const mode=(d.abfall_mode==='disabled')?'disabled':'auto'; try{ await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify({ABFALL:{enabled:mode==='auto'}})}); toast('ABFALL Modus gespeichert','success'); await refreshDashboard(true); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
+  function setAbfallMode(mode,wrap){ const btns=wrap.querySelectorAll('button'); btns.forEach(b=>{ b.classList.remove('active'); if(b.getAttribute('data-mode')===mode) b.classList.add('active'); }); const form=wrap.closest('form'); const hidden=form.querySelector('input[name=abfall_mode]'); hidden.value=mode; }
+  async function reimportWasteConfirm(){
+    if(!confirm('Alle importierten Abfall-Termine löschen und neuen iCal Link importieren?')) return;
+    State.reimportInProgress=true;
+    try{
+      const res = await api('/api/waste/clear',{method:'POST'});
+      if(res && res.cleared){
+        toast('Abfall-Termine gelöscht','success');
+        // Lokale Events sofort entfernen für direkte UI-Reaktion
+        if(State.dashboard){
+          if(State.dashboard.wasteEvents){
+            Object.keys(State.dashboard.wasteEvents).forEach(k=>{ State.dashboard.wasteEvents[k]=[]; });
+          }
+          // Auch Kennzeichen zurücksetzen, damit Render keine alten Daten anzeigt
+          State.dashboard.waste = false;
+          State.dashboard.waste_ok = false;
+          State.dashboard.wasteConfirmed = false;
+          State.dashboard.wasteIcalUrl = null;
+        }
+        render();
+        // Dashboard aktualisieren ohne Wizard-Auto-Umschaltung
+  await refreshDashboard(true,{suppressWizard:true});
+      } else {
+        toast('Löschen fehlgeschlagen','error');
+      }
+    }catch(e){ toast('Fehler beim Neu-Import','error'); }
+    finally { State.reimportInProgress=false; }
+  }
   async function confirmWasteSetup(form){ try{ if(form){ const d=Object.fromEntries(new FormData(form).entries()); State.pendingWasteColors=d; await api('/api/waste/colors',{method:'POST',body:JSON.stringify(d)}); } await api('/api/waste/colors',{method:'POST',body:JSON.stringify({confirm:true})}); toast('Abfall-Konfiguration bestätigt','success'); State.pendingWasteColors=null; await refreshDashboard(); State.step=3; render(); }catch(e){ toast('Fehler bei Bestätigung','error'); } }
   async function saveWasteColor(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/color',{method:'POST',body:JSON.stringify({color:d.color})}); toast('Farbe gespeichert','success'); await refreshDashboard(true); }catch(e){ toast('Fehler beim Speichern','error'); } }
   async function saveMarkets(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/settings/markets',{method:'POST',body:JSON.stringify(d)}); toast('Börsenkurse gespeichert','success'); State.step=5; render(); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
@@ -1045,11 +1262,26 @@
     btn.textContent='Jetzt neu starten';
     btn.addEventListener('click',async()=>{
       btn.disabled=true; const old=btn.textContent; btn.textContent='Neustart…';
-  try{ const r=await fetch('/api/restart',{method:'POST'}); if(r.ok){ toast('Gerät startet neu…'); State.mqttNeedsRestart=false; } else { toast('Neustart fehlgeschlagen'); btn.disabled=false; btn.textContent=old; } }
+      try{ const r=await fetch('/api/restart',{method:'POST'}); if(r.ok){ toast('Gerät startet neu…'); State.mqttNeedsRestart=false; beginRebootWatch(false); } else { toast('Neustart fehlgeschlagen'); btn.disabled=false; btn.textContent=old; } }
       catch(err){ console.error('Restart failed',err); toast('Netzwerkfehler'); btn.disabled=false; btn.textContent='Jetzt neu starten'; }
     });
     box.appendChild(btn);
     form.appendChild(box);
+  }
+
+  function beginRebootWatch(longWait){
+    if(State.rebootWatching) return;
+    State.rebootWatching=true;
+    let sawDown=false; const start=Date.now();
+    const maxMs= longWait? 45000 : 25000;
+    const attempt=()=>{
+      fetch('/api/dashboard',{cache:'no-store'}).then(r=>{
+        if(!r.ok) throw new Error('bad');
+        if(sawDown){ location.reload(); }
+        else { if(Date.now()-start>maxMs){ location.reload(); return; } setTimeout(attempt,1000); }
+      }).catch(()=>{ sawDown=true; if(Date.now()-start>maxMs){ location.reload(); return; } setTimeout(attempt,1500); });
+    };
+    setTimeout(attempt, longWait? 3000 : 1500);
   }
 
   // Init
@@ -1067,8 +1299,9 @@
     }
   });
   if(localStorage.getItem('rcWizardDone')==='1') { State.wizardMode=false; State.view='Dashboard'; }
+  if(localStorage.getItem('rcSkipWaste')==='1') { State.skipWaste=true; }
   pollForStage();
-  refreshDashboard();
+  refreshDashboard(true);
   render();
   pushAppState();
   startDashboardLoop();
