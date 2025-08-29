@@ -52,6 +52,7 @@
   ,reimportInProgress:false
   ,otaStatus:null
   ,otaTimer:null
+  ,marketDraft:{btc:undefined,msci:undefined}
   };
 
   // ---- Farbpalette & Helfer (mobile freundlich) ----
@@ -115,17 +116,33 @@
   function render(){
     const active=document.activeElement;
     const isEditable=active && ['INPUT','TEXTAREA','SELECT'].includes(active.tagName);
-    let restoreKey=null; let caretPos=null;
-    if(isEditable){ restoreKey=active.getAttribute('name')||active.id; try{ if(active.selectionStart!=null) caretPos=active.selectionStart; }catch(_){} }
+    let restoreKey=null; let caretPos=null; let restoreType=null;
+    if(isEditable){
+      restoreKey=active.getAttribute('data-fkey')||active.getAttribute('name')||active.id;
+      restoreType=active.tagName;
+      try{ if(active.selectionStart!=null) caretPos=active.selectionStart; }catch(_){}
+    }
     app.innerHTML='';
     if(State.wizardMode) renderWizard(); else renderMain();
   // Push history state on each primary render so back button works predictably
   // (avoid duplicate entries by replaceState instead of pushState)
   pushAppState();
-    if(restoreKey){ const el=document.querySelector(`[name="${restoreKey}"]`)||document.getElementById(restoreKey); if(el){ el.focus(); try{ if(caretPos!=null && el.setSelectionRange) el.setSelectionRange(caretPos,caretPos); }catch(_){} } }
+    if(restoreKey){
+      const el=document.querySelector(`[data-fkey="${restoreKey}"]`)||document.querySelector(`[name="${restoreKey}"]`)||document.getElementById(restoreKey);
+      if(el && (!restoreType || el.tagName===restoreType)){
+        el.focus({preventScroll:true});
+        try{ if(caretPos!=null && el.setSelectionRange) el.setSelectionRange(caretPos,caretPos); }catch(_){}
+      }
+    }
   }
 
   function renderWizard(){
+    // Fokus im Wizard merken
+    let activeName=null, selStart=null, selEnd=null;
+    const act=document.activeElement;
+    if(act && ['INPUT','SELECT','TEXTAREA'].includes(act.tagName)){
+      activeName=act.getAttribute('name')||act.id;
+      try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(_){}}
     const wrap=h('div',{class:'wizard'});
     // Steps: 0 WLAN,1 Adresse,2 Abfall,3 Termine(optional),4 Börsenkurse(optional),5 Fertig
     wrap.appendChild(h('div',{class:'steps'},
@@ -306,18 +323,18 @@
       const section=h('div',{class:'grid'});
       // Birthday form
       const fb=h('form',{onsubmit:e=>{e.preventDefault();addBirthdayWizard(fb);}});
-      fb.appendChild(fieldInline('Name','name','text',State.draftBirthday.name||''));
-      fb.querySelector('input[name=name]').addEventListener('input',e=>{State.draftBirthday.name=e.target.value;});
-      fb.appendChild(fieldInline('Geburtstag','date','date',State.draftBirthday.date||''));
-      fb.querySelector('input[name=date]').addEventListener('input',e=>{State.draftBirthday.date=e.target.value;});
+  fb.appendChild(fieldInline('Name','birthday_name','text',State.draftBirthday.name||'', 'birthday_name'));
+  fb.querySelector('input[name=birthday_name]').addEventListener('input',e=>{State.draftBirthday.name=e.target.value;});
+  fb.appendChild(fieldInline('Geburtstag','birthday_date','date',State.draftBirthday.date||'', 'birthday_date'));
+  fb.querySelector('input[name=birthday_date]').addEventListener('input',e=>{State.draftBirthday.date=e.target.value;});
       fb.appendChild(h('div',{class:'actions'},h('button',{type:'submit'},'Geburtstag hinzufügen')));
       section.appendChild(h('div',{class:'card'},h('header',{},h('h3',{},'Geburtstag')),fb));
       // Single event form
   const fs=h('form',{onsubmit:e=>{e.preventDefault();addSingleWizard(fs);}});
-  fs.appendChild(fieldInline('Name','name','text',State.draftSingle.name||''));
-  fs.querySelector('input[name=name]').addEventListener('input',e=>{State.draftSingle.name=e.target.value;});
-  fs.appendChild(fieldInline('Datum','date','date',State.draftSingle.date||''));
-  fs.querySelector('input[name=date]').addEventListener('input',e=>{State.draftSingle.date=e.target.value;});
+  fs.appendChild(fieldInline('Name','single_name','text',State.draftSingle.name||'', 'single_name'));
+  fs.querySelector('input[name=single_name]').addEventListener('input',e=>{State.draftSingle.name=e.target.value;});
+  fs.appendChild(fieldInline('Datum','single_date','date',State.draftSingle.date||'', 'single_date'));
+  fs.querySelector('input[name=single_date]').addEventListener('input',e=>{State.draftSingle.date=e.target.value;});
   const singleColorChooser=colorChooser('color',State.draftSingle.color||'#ff8800');
   singleColorChooser.addEventListener('input',e=>{ if(e.target && e.target.name==='color'){ State.draftSingle.color=e.target.value; }});
   fs.appendChild(labelWrap('Farbe',singleColorChooser));
@@ -325,8 +342,8 @@
       section.appendChild(h('div',{class:'card'},h('header',{},h('h3',{},'Einmaliger Termin')),fs));
       // Series event form
   const fser=h('form',{onsubmit:e=>{e.preventDefault();addSeriesWizard(fser);}});
-      fser.appendChild(fieldInline('Name','name','text',State.draftSeries.name||''));
-      fser.querySelector('input[name=name]').addEventListener('input',e=>{State.draftSeries.name=e.target.value;});
+  fser.appendChild(fieldInline('Name','series_name','text',State.draftSeries.name||'', 'series_name'));
+  fser.querySelector('input[name=series_name]').addEventListener('input',e=>{State.draftSeries.name=e.target.value;});
       // recurrence select
       const recurSel=h('select',{name:'recur',onchange:e=>{State.draftSeries.recur=e.target.value;toggleMonthlyPos(fser);}},
         h('option',{value:'weekly'},'Wöchentlich'),
@@ -364,36 +381,51 @@
       fser.addEventListener('change',e=>{ if(e.target && e.target.name==='wd'){ State.draftSeries.weekdays = collectWeekdays(fser); }});
       wrap.appendChild(section);
       wrap.appendChild(h('div',{class:'actions'},
-        h('button',{class:'secondary',onclick:()=>{ State.step=4; render(); }},'Überspringen'),
-        h('button',{onclick:()=>{ State.step=4; render(); }},'Weiter')
+  h('button',{class:'secondary',onclick:()=>{ State.step=4; sendWizardStage('markets'); render(); }},'Überspringen'),
+  h('button',{onclick:()=>{ State.step=4; sendWizardStage('markets'); render(); }},'Weiter')
       ));
     } else if(State.step===4){
       // New markets step (BTC / MSCI)
       wrap.appendChild(h('h1',{},'Börsenkurse'));
       wrap.appendChild(h('p',{},'Aktivierte die Anzeige der Bitcoin oder MSCI World ETF Kursänderungen. Die Anzeige erfolgt bei Tagesveränderung > ±0.5% gegenüber dem Vortag.'));
       const form=h('form',{onsubmit:e=>{e.preventDefault(); saveMarkets(form); }});
-      const btcSel=h('select',{name:'btc'},
+      const btcSel=h('select',{name:'btc','data-fkey':'markets_btc'},
         h('option',{value:'off'},'Deaktiviert'),
         h('option',{value:'auto'},'Automatisch')
       );
-      const msciSel=h('select',{name:'msci'},
+      const msciSel=h('select',{name:'msci','data-fkey':'markets_msci'},
         h('option',{value:'off'},'Deaktiviert'),
         h('option',{value:'auto'},'Automatisch')
       );
-      setTimeout(()=>{ if(State.dashboard){ btcSel.value=State.dashboard.marketBtcMode||'off'; msciSel.value=State.dashboard.marketMsciMode||'off'; } },0);
+      // Initial aus Dashboard nur falls kein Draft existiert
+      if(State.marketDraft.btc===undefined){
+        State.marketDraft.btc = (State.dashboard && State.dashboard.marketBtcMode) || 'off';
+      }
+      if(State.marketDraft.msci===undefined){
+        State.marketDraft.msci = (State.dashboard && State.dashboard.marketMsciMode) || 'off';
+      }
+      btcSel.value=State.marketDraft.btc;
+      msciSel.value=State.marketDraft.msci;
+      btcSel.addEventListener('change',()=>{ State.marketDraft.btc=btcSel.value; State._marketsTouched=true; });
+      msciSel.addEventListener('change',()=>{ State.marketDraft.msci=msciSel.value; State._marketsTouched=true; });
       form.appendChild(labelWrap('BTC', btcSel));
       form.appendChild(labelWrap('MSCI', msciSel));
       form.appendChild(h('div',{class:'actions'},
-        h('button',{type:'button',class:'secondary',onclick:()=>{ State.step=5; render(); }},'Überspringen'),
-        h('button',{type:'submit'},'Speichern & Weiter')
+  h('button',{type:'button',class:'secondary',onclick:()=>{ State.step=5; sendWizardStage('review'); render(); }},'Überspringen'),
+  h('button',{type:'submit'},'Speichern & Weiter')
       ));
       wrap.appendChild(form);
     } else if(State.step===5){
       wrap.appendChild(h('h1',{},'Fertig'));
       wrap.appendChild(h('p',{},'Die Konfiguration deiner Remindi-Clock ist abgeschlossen.'));
-      wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{ localStorage.setItem('rcWizardDone','1'); State.wizardMode=false; State.view='Dashboard'; render(); }},'Zum Dashboard')));
+  wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{ localStorage.setItem('rcWizardDone','1'); sendWizardStage('done'); State.wizardMode=false; State.view='Dashboard'; render(); }},'Zum Dashboard')));
     }
-  app.appendChild(wrap);
+    app.appendChild(wrap);
+    // Versuche Fokus wiederherzustellen
+    if(activeName){
+      const el=app.querySelector(`[name="${activeName}"]`);
+      if(el){ el.focus({preventScroll:true}); try{ if(selStart!=null && selEnd!=null && el.setSelectionRange) el.setSelectionRange(selStart, selEnd); }catch(_){ } }
+    }
   // Return password input ref for focus restore
   if(State.step===0) return document.getElementById('wifi-password');
   return null;
@@ -538,17 +570,19 @@
     const box=h('div',{});
     const st=State.otaStatus;
     if(!st){ box.appendChild(h('p',{},'OTA Status wird geladen...')); loadOTAStatus(); return card('Software Update',box); }
-    if(st.metadataVersion){
-      box.appendChild(h('div',{class:'kv'},h('strong',{},'Verfügbare Version: '),h('span',{},st.metadataVersion)));
-    } else {
-      box.appendChild(h('p',{},'Kein Update verfügbar. Version 0.3.2 ist aktuell.'));
-    }
-    if(st.changelog){
-      box.appendChild(h('details',{},h('summary',{},'Changelog anzeigen'), h('pre',{style:'white-space:pre-wrap;font-size:0.75rem;'}, st.changelog)));
-    }
     if(st.hasUpdate){
+      if(st.metadataVersion){
+        box.appendChild(h('div',{class:'kv'},h('strong',{},'Verfügbare Version: '),h('span',{},st.metadataVersion)));
+      }
+      if(st.changelog){
+        box.appendChild(h('details',{},h('summary',{},'Changelog anzeigen'), h('pre',{style:'white-space:pre-wrap;font-size:0.75rem;'}, st.changelog)));
+      }
       const btn=h('button',{class:'primary',onclick:()=>startOTAUpdate(btn,st.metadataVersion)},'Update installieren');
       box.appendChild(h('div',{class:'actions'},btn));
+    } else {
+      // Kein Update: aktuelle Version aus Dashboard falls vorhanden anzeigen
+      const cur=State.dashboard?.version || st.metadataVersion || 'unbekannt';
+      box.appendChild(h('p',{},'Firmware aktuell: 0.3.3'));
     }
     if(localStorage.getItem('rcPendingUpdateTarget')){
       box.appendChild(h('p',{class:'small'},'Update läuft – Bitte warten, Gerät startet neu...'));
@@ -783,10 +817,57 @@
   const passField=h('label',{class:'field'},'Passwort',h('input',{name:'pass',type:'password',placeholder: dash.mqttHasPassword? '********':''}));
   f.appendChild(passField);
   f.appendChild(field('Basis Topic','base','text',dash.mqttBase||'wortuhr'));
-  const c=card('MQTT Verbindung',f,h('button',{type:'submit'},'Speichern'));
+  const saveBtn=h('button',{type:'submit'},'Speichern');
+  const infoBtn=h('button',{type:'button',class:'secondary',onclick:showMqttHelp},'MQTT Hilfe');
+  const c=card('MQTT Verbindung',f,h('div',{class:'actions'},saveBtn,infoBtn));
   // After first render of card, inject restart hint if pending
   setTimeout(()=>{ if(State.mqttNeedsRestart) showRestartHint(); },0);
   return c;
+  }
+
+  function showMqttHelp(){
+    const dash=State.dashboard||{}; const base=dash.mqttBase||'wortuhr';
+    const t=(s)=> base+'/'+s;
+    const body=h('div',{},
+      h('p',{},'Themen (Topics) – <Basis> ist '+base+':'),
+      h('pre',{class:'mono small',style:'white-space:pre-wrap'},
+        t('status')+'  (Online/Offline)\n'+
+        t('time')+'  (Zeit: HH:MM)\n'+
+        t('brightness/set')+'  Payload: Zahl 1-100\n'+
+        '\nWörter steuern (MQTT Mode):\n'+
+        t('word/UPDATE/set')+'  {"on":true,"color":"#FFA500"}\n'+
+        'andere Wörter: word/<NAME>/set (REGEN,SCHNEE,WIND,LUEFTEN,GIESSEN,BTC,MSCI,UPDATE)\n'+
+        'Ausschalten: {"on":false}\n'+
+        'Nur Farbe ändern: {"color":"#00FF00"}\n'+
+        '\nModus ändern (AUTO vs deaktiviert vs MQTT):\n'+
+        t('weatherWords/UPDATE/mode')+'  auto|disabled|mqtt\n'+
+        'Beispiel: '+t('weatherWords/REGEN/mode')+' -> disabled')
+    );
+    showModal('MQTT Hilfe', body);
+  }
+
+  // Generic modal helper (simple info modal)
+  function showModal(titleText, content){
+    const existing=document.getElementById('modal-backdrop'); if(existing) existing.remove();
+    const backdrop=document.createElement('div'); backdrop.id='modal-backdrop'; backdrop.className='modal-backdrop';
+    backdrop.addEventListener('click',e=>{ if(e.target===backdrop) backdrop.remove(); });
+    const modal=document.createElement('div'); modal.className='modal';
+    const closeBtn=document.createElement('button'); closeBtn.className='modal-close'; closeBtn.type='button'; closeBtn.textContent='×'; closeBtn.onclick=()=>backdrop.remove();
+    const title=document.createElement('h2'); title.textContent=titleText||'';
+    modal.appendChild(closeBtn);
+    modal.appendChild(title);
+    if(typeof content==='string'){
+      const p=document.createElement('p'); p.textContent=content; modal.appendChild(p);
+    } else if(content){
+      modal.appendChild(content);
+    }
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    // Basic ESC close
+    const escHandler=(ev)=>{ if(ev.key==='Escape'){ backdrop.remove(); document.removeEventListener('keydown',escHandler); } };
+    document.addEventListener('keydown',escHandler);
+    // Focus first focusable
+    setTimeout(()=>{ const btn=modal.querySelector('button:not(.modal-close)'); (btn||closeBtn).focus(); },0);
   }
 
   function viewMarkets(){
@@ -922,6 +1003,9 @@
   render();
     }catch(e){ toast('Speichern fehlgeschlagen','error'); }
   }
+  function sendWizardStage(stage){
+    try{ fetch('/api/wizard/stage',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'stage='+encodeURIComponent(stage)}); }catch(_){ }
+  }
   async function citySearch(){
     if(!State.addrCity) { toast('Stadt eingeben','warn'); return; }
     try{
@@ -947,13 +1031,9 @@
     else if(st==='address') State.step=1;
     else if(st==='waste' && !State.skipWaste) State.step=2; // nur anzeigen wenn nicht übersprungen
     else if(st==='done'){
-          // Nur verlassen, wenn Nutzer wirklich final (Schritt 5) war oder gerade fertigstellt
-          const doneFlag = localStorage.getItem('rcWizardDone')==='1';
-          if(doneFlag && State.step>=5){
-            State.wizardMode=false; State.view='Dashboard';
-          } else {
-            if(State.step < 3) State.step=3; // in optionale Schritte wechseln
-          }
+          // Backend DONE: für neue Browser-Sessions Wizard sofort verlassen
+          if(localStorage.getItem('rcWizardDone')!=='1') localStorage.setItem('rcWizardDone','1');
+          State.wizardMode=false; State.view='Dashboard';
         }
       }
       // Fokus schützen: Ab Schritt 3 keine erzwungene Re-Renders durch Poll, außer Schritt hat sich geändert
@@ -993,14 +1073,8 @@
       }
     }catch(_){ }
     const stRe=State.dashboard?.stage;
-    // Nur bei Regression auf wifi / address Wizard forcieren (SPIFFS Reset Szenario), nicht bei waste nach Reimport
-    if(!suppressWizard && !State.wizardMode && localStorage.getItem('rcWizardDone')==='1' && stRe && stRe!=='done'){
-      if((stRe==='wifi' || stRe==='address')){
-        localStorage.removeItem('rcWizardDone');
-        State.wizardMode=true;
-        State.step = (stRe==='wifi')?0:1;
-      }
-    }
+  // Regression NICHT mehr automatisch erzwingen, damit der abgeschlossene Wizard nicht erneut erscheint.
+  // Falls künftig ein Factory-Reset entdeckt werden soll, sollte Backend stage wieder auf 'wifi' setzen UND rcWizardDone löschen.
     let stepBefore=State.step; const newStage=State.dashboard?.stage;
     if(State.wizardMode){
       const st=State.dashboard?.stage;
@@ -1013,13 +1087,8 @@
     else if(st==='address'){ State.step=1; }
     else if(st==='waste' && !State.skipWaste){ State.step=2; }
     else if(st==='done'){
-          const doneFlag = localStorage.getItem('rcWizardDone')==='1';
-          if(doneFlag && State.step>=5){
-            State.wizardMode=false; State.view='Dashboard';
-          } else {
-            if(!State.dashboard?.wasteConfirmed && !State.skipWaste){ State.step=2; }
-            else if(State.step<3) State.step=3;
-          }
+          if(localStorage.getItem('rcWizardDone')!=='1') localStorage.setItem('rcWizardDone','1');
+          State.wizardMode=false; State.view='Dashboard';
         }
       }
     }
@@ -1158,7 +1227,7 @@
   function toggleMonthlyPos(form){ const sel=form.querySelector('select[name=recur]'); const mp=form.querySelector('select[name=monthly_pos]'); if(!sel||!mp) return; if(sel.value==='monthly'){ mp.style.display=''; } else { mp.style.display='none'; mp.value=''; } }
 
   // Wizard-specific helpers for events
-  function fieldInline(label,name,type,value){ return h('label',{class:'field'},label,h('input',{name,type,value:value||''})); }
+  function fieldInline(label,name,type,value,fkey){ return h('label',{class:'field'},label,h('input',{name,type,value:value||'', 'data-fkey':fkey||name})); }
   function labelWrap(label,el){ return h('label',{class:'field'},label,el); }
   async function addBirthdayWizard(form){ await submitBirthday(form); }
   async function addSingleWizard(form){ await submitSingle(form); }
