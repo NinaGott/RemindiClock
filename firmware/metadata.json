@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.3.0",
+  "latest_version": "0.3.1",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "50A1F0A44316B598FBE23796327EE49B1B3C2B27FDFE9FDE817EB88A400FAF94",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.3.0.txt",
+  "firmware_sha256": "072F2350A334A33DC646AE103AEF7A24BDD2E44EAE4A85B61809730183DA4409",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.3.1.txt",
   "assets_manifest_sha256": "68B37586216C94564591CD185A167FC25F614EB03EC375810CE236F6675A5A78",
-  "changelog": "Zum Testen der OTA Funktion .. Version 0.3.0"
+  "changelog": "Zum Testen der OTA Funktion .. Version 0.3.1"
 }
