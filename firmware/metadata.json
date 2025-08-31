@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.3.3",
+  "latest_version": "0.3.5",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "44C5D93FE7CE7ABA84585D68FA473BCCAA5D20FDA5653071BAD66DC613C44B6D",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.3.3.txt",
+  "firmware_sha256": "3BA72CBC206BDCD017D21ECF4D92C1B64ABC79B8F5A0641D73A03840506F632D",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.3.5.txt",
   "assets_manifest_sha256": "028D965853E87ABB64347A3D0B4153ABC59EC0D92CD9FAAD23803B0878BA79F8",
-  "changelog": "Zum Testen der OTA Funktion .. Version 0.3.3"
+  "changelog": "Anpassung Wetter Prognose .. Version 0.3.5"
 }
