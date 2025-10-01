@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.3.5",
+  "latest_version": "0.4.0",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "3BA72CBC206BDCD017D21ECF4D92C1B64ABC79B8F5A0641D73A03840506F632D",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.3.5.txt",
-  "assets_manifest_sha256": "028D965853E87ABB64347A3D0B4153ABC59EC0D92CD9FAAD23803B0878BA79F8",
-  "changelog": "Anpassung Wetter Prognose .. Version 0.3.5"
+  "firmware_sha256": "C7966BFF16D5BB227F642AF242F44E99E15FCD2DDD4E7E39F75D8C30736028EA",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.4.0.txt",
+  "assets_manifest_sha256": "230B824DC2C9C7882DF1006BC000904D1F6280A05D0CDA3570ECF0B8BE6E5BD9",
+  "changelog": "Security Updates .. Version 0.4.0"
 }

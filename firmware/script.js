@@ -50,9 +50,12 @@
   ,mqttNeedsRestart:false
   ,rebootWatching:false
   ,reimportInProgress:false
+  ,wasteImportStartedAt:0
   ,otaStatus:null
   ,otaTimer:null
   ,marketDraft:{btc:undefined,msci:undefined}
+  ,_histKey:''
+  ,showWifiPassword:false
   };
 
   // ---- Farbpalette & Helfer (mobile freundlich) ----
@@ -91,8 +94,14 @@
   };
   const api=async (url,opts={})=>{
     const r= await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});
-    if(!r.ok) throw new Error(r.status+' '+r.statusText);
     const ct=r.headers.get('content-type')||'';
+    if(!r.ok){
+      // Erlaube für /api/dashboard einen 401/403 mit JSON-Body, damit Login-Gate gerendert werden kann
+      if((r.status===401 || r.status===403) && url.includes('/api/dashboard') && ct.includes('application/json')){
+        const j=await r.json(); j.__httpStatus=r.status; return j;
+      }
+      throw new Error(r.status+' '+r.statusText);
+    }
     if(ct.includes('application/json')) return await r.json();
     return await r.text();
   };
@@ -123,10 +132,21 @@
       try{ if(active.selectionStart!=null) caretPos=active.selectionStart; }catch(_){}
     }
     app.innerHTML='';
+    // Auth gate hard block: wenn Anmeldung erforderlich und nicht eingeloggt, nur Login anzeigen
+    if(State.dashboard && State.dashboard.authRequired && !State.dashboard.authed){
+      showLoginGate();
+      return;
+    }
     if(State.wizardMode) renderWizard(); else renderMain();
-  // Push history state on each primary render so back button works predictably
-  // (avoid duplicate entries by replaceState instead of pushState)
-  pushAppState();
+    // History handling: push only when view/step changes
+    const key=(State.wizardMode?'wiz:'+State.step:'app:'+State.view+':'+(State.view==='Settings'? (State.subView||''):''));
+    if(!State._histKey){
+      try{ history.replaceState({app:1,wizard:State.wizardMode,step:State.step,view:State.view,sub:State.subView},''); }catch(_){ }
+      State._histKey=key;
+    } else if(State._histKey!==key){
+      try{ history.pushState({app:1,wizard:State.wizardMode,step:State.step,view:State.view,sub:State.subView},''); }catch(_){ }
+      State._histKey=key;
+    }
     if(restoreKey){
       const el=document.querySelector(`[data-fkey="${restoreKey}"]`)||document.querySelector(`[name="${restoreKey}"]`)||document.getElementById(restoreKey);
       if(el && (!restoreType || el.tagName===restoreType)){
@@ -144,7 +164,7 @@
       activeName=act.getAttribute('name')||act.id;
       try{ selStart=act.selectionStart; selEnd=act.selectionEnd; }catch(_){}}
     const wrap=h('div',{class:'wizard'});
-    // Steps: 0 WLAN,1 Adresse,2 Abfall,3 Termine(optional),4 Börsenkurse(optional),5 Fertig
+  // Steps: 0 WLAN,1 Passwort (falls erforderlich),2 Adresse,3 Abfall,4 Termine(optional),5 Börsenkurse(optional),6 Fertig
     wrap.appendChild(h('div',{class:'steps'},
       [0,1,2,3,4,5].map(i=>h('span',{class: i===State.step?'active':''}))
     ));
@@ -158,8 +178,10 @@
       wrap.appendChild(h('div',{class:'divider'}));
   const form=h('form',{onsubmit:e=>{e.preventDefault();connectWifi(form)}});
   form.appendChild(h('label',{class:'field'},'SSID',h('input',{name:'ssid',required:true,placeholder:'Netzwerk',value:State.selectedSSID||'',oninput:e=>{State.selectedSSID=e.target.value;}})));
-  const pwInput=h('input',{id:'wifi-password',name:'password',type:'password',required:true,placeholder:'Passwort',value:State.wifiPassword||'',oninput:e=>{State.wifiPassword=e.target.value;}});
-  form.appendChild(h('label',{class:'field'},'Passwort',pwInput));
+  const pwInput=h('input',{id:'wifi-password',name:'password',type: (State.showWifiPassword?'text':'password'),required:true,placeholder:'Passwort',value:State.wifiPassword||'',oninput:e=>{State.wifiPassword=e.target.value;}});
+  const eyeBtn=h('button',{type:'button',class:'pw-toggle',title:(State.showWifiPassword?'Passwort verbergen':'Passwort anzeigen'),'aria-label':(State.showWifiPassword?'Passwort verbergen':'Passwort anzeigen'),onclick:()=>{ State.showWifiPassword=!State.showWifiPassword; try{ pwInput.setAttribute('type', State.showWifiPassword?'text':'password'); }catch(_){ } eyeBtn.textContent = State.showWifiPassword?'🙈':'👁'; eyeBtn.setAttribute('title', State.showWifiPassword?'Passwort verbergen':'Passwort anzeigen'); eyeBtn.setAttribute('aria-label', State.showWifiPassword?'Passwort verbergen':'Passwort anzeigen'); }}, State.showWifiPassword?'🙈':'👁');
+  const pwWrap=h('div',{class:'pw-wrap'}, pwInput, eyeBtn);
+  form.appendChild(h('label',{class:'field'},'Passwort',pwWrap));
       form.appendChild(h('div',{class:'actions'},h('button',{type:'submit'},'Verbinden')));
       wrap.appendChild(form);
       const hint=h('div',{class:'card'},
@@ -169,6 +191,23 @@
       wrap.appendChild(hint);
     }
   else if(State.step===1){
+      // Admin password step: now occurs immediately after WiFi connect if backend requires it
+  const mustSet = State.dashboard?.stage === 'adminpass';
+  const needsPw = mustSet || (!!State.dashboard?.authRequired && !State.dashboard?.authed);
+      if(needsPw){
+        wrap.appendChild(h('h1',{},'Admin Passwort'));
+        wrap.appendChild(h('p',{},'Lege ein Passwort für die Weboberfläche fest.'));
+        const f=h('form',{onsubmit:e=>{e.preventDefault();setAdminPassword(f,true);}});
+        f.appendChild(field('Passwort','pw','password',''));
+        f.appendChild(field('Wiederholen','pw2','password',''));
+        wrap.appendChild(f);
+        wrap.appendChild(h('div',{class:'actions'}, h('button',{onclick:()=>{ setAdminPassword(f,true); }},'Speichern & Weiter')));
+      } else {
+        // if not needed, skip ahead to address step
+        State.step=2; render(); return;
+      }
+    } else if(State.step===2){
+      // Address & location
       wrap.appendChild(h('h1',{},'Adresse & Standort'));
   wrap.appendChild(h('p',{},'Adresse bestimmt Zeitzone, Wetter- und Abfall-Region.'));
       if(State.dashboard){
@@ -215,7 +254,7 @@
     ));
   }
       wrap.appendChild(form);
-    } else if(State.step===2){
+  } else if(State.step===3){
       wrap.appendChild(h('h1',{},'Abfallkalender'));
       wrap.appendChild(h('p',{},'iCal Link des regionalen Entsorgers einrichten.'));
       // Region Hinweis basierend auf PLZ / Stadt
@@ -227,25 +266,30 @@
         ));
         if(State.dashboard.wasteProviderName){
           wrap.appendChild(h('div',{class:'card'},
-            h('p',{},'Lokaler Entsorger: '+State.dashboard.wasteProviderName),
-            h('p',{},h('a',{href:State.dashboard.wasteProviderUrl,target:'_blank'},'Website öffnen'))
+            h('p',{},'1. Lokaler Entsorger: '+State.dashboard.wasteProviderName),
+            h('p',{},h('a',{href:State.dashboard.wasteProviderUrl,target:'_blank'},'Website öffnen und iCal URL kopieren'))
           ));
         }
         if(State.dashboard.wasteProviderSearchUrl){
           wrap.appendChild(h('div',{class:'card'},
-            h('p',{},'Falls nicht passend: '),
+            h('p',{},'2. Falls nicht passend: '),
             h('p',{},h('a',{href:State.dashboard.wasteProviderSearchUrl,target:'_blank'},'Google Suche nach regionalem Abfuhrkalender'))
           ));
         }
       }
   if(!State.wasteIcalDraft && State.dashboard?.wasteIcalUrl) State.wasteIcalDraft=State.dashboard.wasteIcalUrl;
   const form=h('form',{onsubmit:e=>{e.preventDefault();saveWaste(form);}});
-  form.appendChild(h('label',{class:'field'},'iCal URL',h('input',{name:'url',type:'url',placeholder:'https://...',value:State.wasteIcalDraft||'',oninput:e=>{State.wasteIcalDraft=e.target.value;}})));
+  form.appendChild(h('label',{class:'field'},'3. iCal URL vom lokalen Entsorger einfügen',h('input',{name:'url',type:'url',placeholder:'https://...',value:State.wasteIcalDraft||'',oninput:e=>{State.wasteIcalDraft=e.target.value;}})));
     // Aktionen: Importieren + Überspringen nebeneinander (Skip nur wenn noch nicht bestätigt)
     const actionChildren=[ h('button',{type:'submit'}, State.dashboard?.wasteIcalUrl?'Neu laden':'Importieren') ];
     if(!State.dashboard?.wasteConfirmed){
       actionChildren.push(
-  h('button',{type:'button',class:'secondary',onclick:()=>{ if(!State.skipWaste){ State.skipWaste=true; localStorage.setItem('rcSkipWaste','1'); } State.step=3; State.view=null; render(); }},'Überspringen')
+        h('button',{type:'button',class:'secondary',onclick:()=>{
+          if(!State.skipWaste){ State.skipWaste=true; localStorage.setItem('rcSkipWaste','1'); }
+          // Überspringe Pflichtschritt lokal und fahre mit optionalen Schritten fort (Events)
+          sendWizardStage('events');
+          State.step=4; State.view=null; render();
+        }},'Überspringen')
       );
     }
     form.appendChild(h('div',{class:'actions'}, actionChildren));
@@ -272,11 +316,11 @@
         const wrap=h('label',{class:'field'},label,input);
         colorForm.appendChild(wrap);
       };
-      addColor('Bio','bio',State.dashboard.wasteColorBio);
+      addColor('Bioabfall','bio',State.dashboard.wasteColorBio);
       addColor('Restmüll','residual',State.dashboard.wasteColorResidual);
       addColor('Papier','paper',State.dashboard.wasteColorPaper);
-      addColor('Verpackung','packaging',State.dashboard.wasteColorPackaging);
-      addColor('Garten','green',State.dashboard.wasteColorGreen);
+      addColor('Verpackung (gelber Sack / Tonne)','packaging',State.dashboard.wasteColorPackaging);
+      addColor('Gartenschnitt','green',State.dashboard.wasteColorGreen);
       // Reset button restores defaults and saves; confirm also saves + confirms
       const doReset=async()=>{
         State.pendingWasteColors={...defaults};
@@ -314,9 +358,19 @@
       });
       if(tbl.querySelector('section')) wrap.appendChild(tbl); else wrap.appendChild(h('div',{class:'card'},h('p',{},'Noch keine Termine importiert.')));
     } else if(State.dashboard?.wasteIcalUrl){
-      wrap.appendChild(h('div',{class:'card'},h('p',{},'Import läuft...')));
+      // Import läuft: bei langer Dauer Button zum erneuten Prüfen anzeigen
+      const box=h('div',{class:'card'});
+      box.appendChild(h('p',{},'Import läuft...'));
+      const stuck = State.wasteImportStartedAt && (Date.now()-State.wasteImportStartedAt>90000);
+      if(stuck){
+        box.appendChild(h('p',{class:'small muted'},'Das dauert länger als üblich. Du kannst die Prüfung erneut starten.'));
+        box.appendChild(h('div',{class:'actions'},
+          h('button',{class:'secondary',onclick:async()=>{ await refreshDashboard(true); render(); }},'Erneut prüfen')
+        ));
+      }
+      wrap.appendChild(box);
     }
-  } else if(State.step===3){
+  } else if(State.step===4){
       wrap.appendChild(h('h1',{},'Termine & Geburtstage'));
       wrap.appendChild(h('p',{},'Lege wiederkehrende oder einzelne Termine sowie Geburtstage an. Dies kann auch später in den Einstellungen erfolgen.'));
       // Simple inline forms (reuse helper builders later in settings view)
@@ -381,10 +435,10 @@
       fser.addEventListener('change',e=>{ if(e.target && e.target.name==='wd'){ State.draftSeries.weekdays = collectWeekdays(fser); }});
       wrap.appendChild(section);
       wrap.appendChild(h('div',{class:'actions'},
-  h('button',{class:'secondary',onclick:()=>{ State.step=4; sendWizardStage('markets'); render(); }},'Überspringen'),
-  h('button',{onclick:()=>{ State.step=4; sendWizardStage('markets'); render(); }},'Weiter')
+        h('button',{class:'secondary',onclick:()=>{ sendWizardStage('markets'); State.step=5; render(); }},'Überspringen'),
+        h('button',{onclick:()=>{ sendWizardStage('markets'); State.step=5; render(); }},'Weiter')
       ));
-    } else if(State.step===4){
+    } else if(State.step===5){
       // New markets step (BTC / MSCI)
       wrap.appendChild(h('h1',{},'Börsenkurse'));
       wrap.appendChild(h('p',{},'Aktivierte die Anzeige der Bitcoin oder MSCI World ETF Kursänderungen. Die Anzeige erfolgt bei Tagesveränderung > ±0.5% gegenüber dem Vortag.'));
@@ -411,14 +465,16 @@
       form.appendChild(labelWrap('BTC', btcSel));
       form.appendChild(labelWrap('MSCI', msciSel));
       form.appendChild(h('div',{class:'actions'},
-  h('button',{type:'button',class:'secondary',onclick:()=>{ State.step=5; sendWizardStage('review'); render(); }},'Überspringen'),
-  h('button',{type:'submit'},'Speichern & Weiter')
+        h('button',{type:'button',class:'secondary',onclick:()=>{ State.step=6; sendWizardStage('review'); render(); }},'Überspringen'),
+        h('button',{type:'submit',onclick:()=>{ State.step=6; sendWizardStage('review'); render(); }},'Speichern & Weiter')
       ));
       wrap.appendChild(form);
     } else if(State.step===5){
+      // final finish
+    } else if(State.step===6){
       wrap.appendChild(h('h1',{},'Fertig'));
       wrap.appendChild(h('p',{},'Die Konfiguration deiner Remindi-Clock ist abgeschlossen.'));
-  wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{ localStorage.setItem('rcWizardDone','1'); sendWizardStage('done'); State.wizardMode=false; State.view='Dashboard'; render(); }},'Zum Dashboard')));
+      wrap.appendChild(h('div',{class:'actions'},h('button',{onclick:()=>{ localStorage.setItem('rcWizardDone','1'); sendWizardStage('done'); State.wizardMode=false; State.view='Dashboard'; render(); }},'Zum Dashboard')));
     }
     app.appendChild(wrap);
     // Versuche Fokus wiederherzustellen
@@ -448,6 +504,15 @@
       main.appendChild(viewDashboard());
     } else if(State.view==='Einstellungen'){
       main.appendChild(viewSettingsHub());
+    }
+    // Logout nur im Dashboard und unten über dem Footer anzeigen
+    if(State.view==='Dashboard' && State.dashboard?.authRequired){
+      const bottom=h('div',{class:'logout-bottom'},
+        h('div',{class:'actions',style:'justify-content:center;margin:1rem 0'},
+          h('button',{onclick:logout},'Logout')
+        )
+      );
+      main.appendChild(bottom);
     }
     main.appendChild(h('footer',{},'RemindiClock © '+new Date().getFullYear()));
     app.appendChild(main);
@@ -527,35 +592,32 @@
   function viewDevice(){
     const d=State.dashboard||{};
     const wrap=h('div',{class:'grid'});
-    // Info box
+    // Reihenfolge: Geräteinfo, Software Update, Wort UPDATE, Neustart, Werkseinstellungen
     const info=h('div',{},
       lineKV('IP', d.ip||'-'),
-      lineKV('WLAN', (d.wifi_ssid? d.wifi_ssid:'-') + rssiIcon(d.wifi_rssi)),
+      lineKV('WLAN', [ (d.wifi_ssid? d.wifi_ssid:'-'), rssiIcon(d.wifi_rssi) ]),
       lineKV('Uptime', formatUptime(d.uptime_ms)),
       lineKV('Zeitzone', d.timezone||'-'),
       lineKV('Firmware', d.version||'?')
     );
     wrap.appendChild(card('Geräteinfo',info));
-    // Restart box
-    const restartBox=h('div',{},h('p',{},'Neustart des Geräts durchführen.'),h('button',{onclick:confirmRestart},'Neustart'));
-    wrap.appendChild(card('Neustart',restartBox));
-    // Factory reset box
-    const resetBox=h('div',{},h('p',{},'Alle Einstellungen löschen und Werkseinstellungen laden.'),h('button',{class:'danger',onclick:factoryResetConfirm},'Werkseinstellungen'));
-    wrap.appendChild(card('Werkseinstellungen',resetBox));
-  // OTA Update Box
-  wrap.appendChild(buildOtaCard());
-    // UPDATE Wort Toggle
+    wrap.appendChild(buildOtaCard());
+    // UPDATE Wort Toggle (Style analog Wetter AUTO/AUS Buttons -> verwenden Klasse inline-btns und .mini Buttons)
     const updMode = (d.updateWordMode)|| (d.weatherWords && d.weatherWords.UPDATE && d.weatherWords.UPDATE.mode) || 'auto';
     const updWrap=h('div',{});
-    const btnRow=h('div',{class:'inline-btns'});
-    function renderUpdBtns(){ btnRow.innerHTML=''; ['auto','disabled'].forEach(m=>{ btnRow.appendChild(h('button',{class:'mini'+(updWrap.dataset.mode===m?' active':''),onclick:()=>{ updWrap.dataset.mode=m; renderUpdBtns(); }}, m==='auto'?'AUTO':'AUS')); }); }
-    updWrap.dataset.mode=updMode==='disabled'?'disabled':'auto';
+  const btnRow=h('div',{class:'inline-btns mode-buttons'});
+    function renderUpdBtns(){
+      btnRow.innerHTML='';
+      [['auto','AUTO'],['disabled','AUS']].forEach(([m,label])=>{
+        btnRow.appendChild(h('button',{class:'mini'+(updWrap.dataset.mode===m?' active':''),onclick:()=>{ updWrap.dataset.mode=m; renderUpdBtns(); }},label));
+      });
+    }
+    updWrap.dataset.mode= (updMode==='disabled')? 'disabled':'auto';
     renderUpdBtns();
     const saveBtn=h('button',{onclick:async()=>{
       const mode=updWrap.dataset.mode;
       try {
-        const payload={ UPDATE:{ enabled: mode==='auto' } };
-        await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify(payload)});
+        await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify({ UPDATE:{ enabled: mode==='auto' } })});
         toast('UPDATE Wort gespeichert','success');
         await refreshDashboard(true);
       } catch(e){ toast('Fehler beim Speichern','error'); }
@@ -564,6 +626,14 @@
     updWrap.appendChild(btnRow);
     updWrap.appendChild(h('div',{class:'actions'},saveBtn));
     wrap.appendChild(card('Wort UPDATE', updWrap));
+    const restartBox=h('div',{},h('p',{},'Neustart des Geräts durchführen.'),h('button',{onclick:confirmRestart},'Neustart'));
+    wrap.appendChild(card('Neustart',restartBox));
+    const resetBox=h('div',{},
+      h('p',{},'Alle gespeicherten Konfigurationen und Daten werden dauerhaft gelöscht (WLAN/MQTT, Adresse/Koordinaten, Abfall-URL und -Cache, Termine/Geburtstage, Zusatzwörter, Debug-Log, OTA-Zustände).'),
+  h('p',{class:'small muted'},'Nach dem Reset startet das Gerät im Access-Point Modus (SSID: RemindiClock-Setup, Passwort siehe Anleitung). Die Weboberfläche ist dann unter http://192.168.4.1 erreichbar.'),
+      h('button',{class:'danger',onclick:factoryResetConfirm},'Werkseinstellungen')
+    );
+    wrap.appendChild(card('Werkseinstellungen',resetBox));
     return wrap;
   }
   function buildOtaCard(){
@@ -582,7 +652,7 @@
     } else {
       // Kein Update: aktuelle Version aus Dashboard falls vorhanden anzeigen
       const cur=State.dashboard?.version || st.metadataVersion || 'unbekannt';
-      box.appendChild(h('p',{},'Firmware aktuell: 0.3.3'));
+      box.appendChild(h('p',{},'Firmware aktuell: '+cur));
     }
     if(localStorage.getItem('rcPendingUpdateTarget')){
       box.appendChild(h('p',{class:'small'},'Update läuft – Bitte warten, Gerät startet neu...'));
@@ -618,11 +688,76 @@
       localStorage.removeItem('rcPendingUpdateTs');
     } finally { done(); }
   }
-  function lineKV(k,v){ return h('div',{class:'kv'},h('strong',{},k+': '),h('span',{},v)); }
-  function rssiIcon(r){ if(r==null) return ''; let lvl=1; if(r>-55) lvl=4; else if(r>-65) lvl=3; else if(r>-75) lvl=2; else lvl=1; return ' '+['▂','▃','▅','█'][lvl-1]; }
+  async function setAdminPassword(form, proceed){
+    const data=Object.fromEntries(new FormData(form).entries());
+    const pw=(data.pw||'').trim(); const pw2=(data.pw2||'').trim();
+    if(pw.length<4){ toast('Passwort zu kurz','warn'); return; }
+    if(pw!==pw2){ toast('Passwörter stimmen nicht überein','error'); return; }
+    try{
+  await api('/api/auth/set',{method:'POST',body:JSON.stringify({password:pw})});
+      toast('Passwort gesetzt','success');
+      await refreshDashboard();
+  if(proceed){ State.step=2; render(); }
+    } catch(e){ toast('Fehler beim Setzen','error'); }
+  }
+  function showLoginGate(){
+    const existing=document.getElementById('login-gate'); if(existing) return;
+    const gate=document.createElement('div'); gate.id='login-gate'; gate.className='login-gate';
+    const box=document.createElement('div'); box.className='login-box';
+    const h2=document.createElement('h2'); h2.textContent='Anmeldung erforderlich'; box.appendChild(h2);
+    const form=document.createElement('form'); form.onsubmit=async (e)=>{ e.preventDefault(); const pw=form.querySelector('input[name=pw]').value; await doLogin(pw); };
+    const lbl=document.createElement('label'); lbl.className='field'; lbl.textContent='Passwort';
+    const inp=document.createElement('input'); inp.type='password'; inp.name='pw'; lbl.appendChild(inp);
+    form.appendChild(lbl);
+    const actions=document.createElement('div'); actions.className='actions';
+    const btn=document.createElement('button'); btn.type='submit'; btn.textContent='Anmelden'; actions.appendChild(btn);
+  const forgot=document.createElement('button'); forgot.type='button'; forgot.className='secondary'; forgot.textContent='Passwort vergessen'; forgot.onclick=()=>forgotPassword(); actions.appendChild(forgot);
+    form.appendChild(actions);
+    box.appendChild(form);
+    gate.appendChild(box);
+    document.body.appendChild(gate);
+    setTimeout(()=>{ inp.focus(); },0);
+  }
+  async function doLogin(pw){
+    try{ await api('/api/auth/login',{method:'POST',body:JSON.stringify({password:pw})}); toast('Angemeldet','success'); await refreshDashboard(true); const gate=document.getElementById('login-gate'); if(gate) gate.remove(); } catch(e){ toast('Falsches Passwort','error'); }
+  }
+  async function logout(){ try{ await fetch('/api/auth/logout',{method:'POST'}); await refreshDashboard(true); showLoginGate(); }catch(e){} }
+  async function forgotPassword(){
+    if(!confirm('Werkseinstellungen ausführen? Alle Daten gehen verloren.')) return;
+    try{
+      await fetch('/api/settings/factory-reset/public',{method:'POST'});
+    }catch(_){ /* ignore */ }
+    // Zeige sofort Hinweis + Reboot-Watch
+    toast('Werkseinstellungen aktiviert. Gerät startet neu...','warn');
+    beginRebootWatch(true);
+  }
+  function lineKV(k,v){
+    const valSpan=h('span',{});
+    if(Array.isArray(v)) v.forEach(x=>{ if(typeof x==='string') valSpan.appendChild(document.createTextNode(x)); else if(x) valSpan.appendChild(x); });
+    else if(typeof v==='string' || typeof v==='number') valSpan.textContent=String(v);
+    else if(v && v.nodeType) valSpan.appendChild(v); // DOM node
+    else if(v!==undefined && v!==null) valSpan.textContent=String(v);
+    return h('div',{class:'kv'},h('strong',{},k+': '),valSpan);
+  }
+  function rssiIcon(r){
+    if(r==null) return '';
+    let lvl=1; if(r>-55) lvl=4; else if(r>-65) lvl=3; else if(r>-75) lvl=2; else lvl=1;
+    const bars=[1,2,3,4].map(i=>{
+      const active = i<=lvl;
+      const bh=4+i*3; // steigende Höhe
+      const x=(i-1)*4;
+      const y=16-bh;
+      return `<rect x="${x}" y="${y}" width="3" height="${bh}" rx="1" fill="${active?'#0af':'#ccc'}"/>`;
+    }).join('');
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="16" viewBox="0 0 16 16" style="vertical-align:middle;margin-left:4px">${bars}</svg>`;
+    return h('span',{class:'wifi-rssi',html:svg});
+  }
   function formatUptime(ms){ if(!ms && ms!==0) return '-'; const s=Math.floor(ms/1000); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); let out=''; if(d) out+=d+'d '; out+=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); return out; }
   function confirmRestart(){ if(!confirm('Gerät wirklich neu starten?')) return; fetch('/api/restart',{method:'POST'}).then(()=>toast('Neustart ausgeführt')); }
-  function factoryResetConfirm(){ if(!confirm('ALLE Einstellungen löschen?')) return; factoryReset(); }
+  function factoryResetConfirm(){
+    if(!confirm('Alle gespeicherten Konfigurationen und Daten werden dauerhaft gelöscht. Fortfahren?')) return;
+    factoryReset();
+  }
 
   function viewBrightness(){
     const c=h('div',{class:'grid'});
@@ -699,8 +834,18 @@
     }
     // Initialize hidden inputs according to initial modes
     order.forEach(k=>{ let m='auto'; if(State.dashboard?.weatherWords && State.dashboard.weatherWords[k] && State.dashboard.weatherWords[k].mode) m=State.dashboard.weatherWords[k].mode; let hidden=h('input',{type:'hidden',name:k+'_mode',value:(m==='auto'?'auto':'disabled')}); f.appendChild(hidden); });
-    f.appendChild(h('button',{type:'submit'},'Speichern'));
+    const actions=h('div',{class:'actions'});
+    const saveBtn=h('button',{type:'submit'},'Speichern');
+  const infoBtn=h('button',{type:'button',class:'btn-info',onclick:()=>showWeatherInfo()},'Info');
+    actions.appendChild(saveBtn); actions.appendChild(infoBtn);
+    f.appendChild(actions);
     return card('Wetter Wörter (Auto-Modus)',f);
+  }
+  function showWeatherInfo(){
+    const text=`Die Wetter Wörter REGEN, SCHNEE und WIND zeigen die erwarteten Wetterereignisse in den kommenden 3 Stunden für deinen Standort.\n\nDas Wort GIESSEN gilt den Gartenpflanzen. Es leuchtet auf, sofern es gestern nicht geregnet hat und draußen warm war und es heute ebenfalls draußen warm ist und nicht regnen wird.\n\nDas Wort LÜFTEN zeigt an, dass aktuell eine hohe gemessene Luftfeuchtigkeit im Innerraum vorliegt (zB durch Kochen, Duschen oder längeren Aufenthalt). Sofern die absolute Luftfeuchtigkeit draußen geringer ist als im Innenraum, leuchtet das Wort LÜFTEN. Dadurch kann die Luftqualität verbessert und zB Schimmelbildung im Innenraum vorgebeugt werden.\n\nSie können individuelle Farben für die jeweiligen Wörter einstellen oder diese deaktivieren.`;
+    const body=document.createElement('div');
+    text.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
+    showModal('Wetter Wörter Info', body);
   }
 
   function viewWaste(){
@@ -725,7 +870,11 @@
     );
     awForm.appendChild(modeWrap);
     awForm.appendChild(h('input',{type:'hidden',name:'abfall_mode',value:abfallMode}));
-    awForm.appendChild(h('button',{type:'submit'},'Speichern'));
+  const abfActions=h('div',{class:'actions'});
+  const abfSave=h('button',{type:'submit'},'Speichern');
+  const abfInfo=h('button',{type:'button',class:'btn-info',onclick:()=>showAbfallInfo()},'Info');
+  abfActions.appendChild(abfSave); abfActions.appendChild(abfInfo);
+  awForm.appendChild(abfActions);
     wrap.appendChild(card('ABFALLKALENDER',awForm));
     // Neue: Einzelne Farben für Kategorien bearbeiten (bio, residual, paper, packaging, green)
     const catColorForm=h('form',{onsubmit:e=>{e.preventDefault();saveWasteColors(catColorForm);}});
@@ -771,6 +920,12 @@
     }
     return wrap;
   }
+  function showAbfallInfo(){
+    const txt=`Das Wort ABFALL leuchtet in der individuellen Farbe der Abfall-Kategorie auf, welche als nächstes vom Entsorger abgeholt wird. Das Wort wird am Vortag der Abholung um 18Uhr aktiviert und am Tag der Abholung um 12 Uhr wieder deaktiviert.\n\nZum Import der Abholungstermine importieren Sie bitte den iCal Kalender Link Ihres lokalen Abfall-Entsorgers (copy-paste einfügen und importieren). Die Zuordnung der Abfall-Kategorien erfolgt automatisch.\n\nSie können individuelle Farben für die Abfallkategorien einstellen oder die Erinnerung zur Abfall-Abholung deaktivieren.`;
+    const body=document.createElement('div');
+    txt.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
+    showModal('Abfallkalender Info', body);
+  }
 
   function viewEvents(){
     const wrap=h('div',{class:'grid'});
@@ -796,13 +951,32 @@
         list.appendChild(row);
       });
       if(arr.length) box.appendChild(list);
-      return card(title,box,h('button',{class:'secondary',onclick:()=>openEventModal(type,null)},'Hinzufügen'));
+  const addBtn=h('button',{class:'btn-add',onclick:()=>openEventModal(type,null)},'Hinzufügen');
+  const infoBtn=h('button',{type:'button',class:'btn-info',onclick:()=>showEventInfo(type)},'Info');
+      const actions=h('div',{class:'actions'},addBtn,infoBtn);
+      return card(title,box,actions);
     };
     wrap.appendChild(buildList('Geburtstage',groups.birthday,'birthday'));
     wrap.appendChild(buildList('Einmalige Termine',groups.single,'single'));
     wrap.appendChild(buildList('Serientermine',groups.series,'series'));
     if(!State.eventsLoaded) loadEvents();
     return wrap;
+  }
+  function showEventInfo(type){
+    let txt=''; let title='Info';
+    if(type==='birthday'){
+      title='Geburtstage Info';
+      txt='Fügen Sie der RemindiClock eine Erinnerung für gespeicherte Geburtstage Ihrer Familie oder Freunde hinzu. Das Wort GEBURTSTAG leuchtet am Tag eines gespeicherten Geburtstag jedes Jahr am passenden Datum automatisch auf.';
+    } else if(type==='single'){
+      title='Einmaliger Termin Info';
+      txt='Lassen Sie sich an einen wichtigen Termin in Ihrer Wunschfarbe erinneren. Fügen Sie einen Termin hinzu und Ihre RemindiClock wird das Wort TERMIN am Tag des Termins anzeigen';
+    } else if(type==='series'){
+      title='Serientermine Info';
+      txt='Lassen Sie sich an einen wiederkehrende Termine in Ihrer Wunschfarbe erinneren. Fügen Sie einen Serientermin hinzu und Ihre RemindiClock wird das Wort TERMIN am Tag des Termins anzeigen. Stellen Sie die Wiederholfrequenz des Termins (wöchentlich, 14-tägig oder monatlich) und den jeweiligen Wochentag ein. Für die monatliche Wiederholung geben Sie bitte zusätzlich an ob Sie am 1., 2., 3. oder 4. Auftreten des Wochentags im Monat an den Termin erinnert werden möchten.';
+    }
+    const body=document.createElement('div');
+    txt.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
+    showModal(title, body);
   }
 
   function viewMQTT(){
@@ -816,7 +990,7 @@
   // Passwort nie vorausfüllen, Platzhalter anzeigen falls gesetzt
   const passField=h('label',{class:'field'},'Passwort',h('input',{name:'pass',type:'password',placeholder: dash.mqttHasPassword? '********':''}));
   f.appendChild(passField);
-  f.appendChild(field('Basis Topic','base','text',dash.mqttBase||'wortuhr'));
+  f.appendChild(field('Basis Topic','base','text',dash.mqttBase||'RemindiClock'));
   const saveBtn=h('button',{type:'submit'},'Speichern');
   const infoBtn=h('button',{type:'button',class:'secondary',onclick:showMqttHelp},'MQTT Hilfe');
   const c=card('MQTT Verbindung',f,h('div',{class:'actions'},saveBtn,infoBtn));
@@ -826,22 +1000,36 @@
   }
 
   function showMqttHelp(){
-    const dash=State.dashboard||{}; const base=dash.mqttBase||'wortuhr';
-    const t=(s)=> base+'/'+s;
+  const dash=State.dashboard||{}; const base=dash.mqttBase||'RemindiClock';
+    const wEx=base+'/word/BTC';
     const body=h('div',{},
-      h('p',{},'Themen (Topics) – <Basis> ist '+base+':'),
+      h('p',{},'MQTT Struktur – Basis-Topic: '+base),
       h('pre',{class:'mono small',style:'white-space:pre-wrap'},
-        t('status')+'  (Online/Offline)\n'+
-        t('time')+'  (Zeit: HH:MM)\n'+
-        t('brightness/set')+'  Payload: Zahl 1-100\n'+
-        '\nWörter steuern (MQTT Mode):\n'+
-        t('word/UPDATE/set')+'  {"on":true,"color":"#FFA500"}\n'+
-        'andere Wörter: word/<NAME>/set (REGEN,SCHNEE,WIND,LUEFTEN,GIESSEN,BTC,MSCI,UPDATE)\n'+
-        'Ausschalten: {"on":false}\n'+
-        'Nur Farbe ändern: {"color":"#00FF00"}\n'+
-        '\nModus ändern (AUTO vs deaktiviert vs MQTT):\n'+
-        t('weatherWords/UPDATE/mode')+'  auto|disabled|mqtt\n'+
-        'Beispiel: '+t('weatherWords/REGEN/mode')+' -> disabled')
+        '# Topics je Wort (Beispiel BTC)\n'+
+        wEx+'/set    (Commands)\n'+
+        wEx+'/on     (retained true|false)\n'+
+        wEx+'/mode   (retained mqtt|auto|disabled)\n'+
+        wEx+'/color  (retained #RRGGBB oder leer)\n\n'+
+        '# Befehle (Topic <base>/word/<WORD>/set)\n'+
+        'Einfacher String:\n'+
+        '  mqtt\n  auto\n  disabled\n  on\n  off\n  on #FF8800\n\n'+
+        'JSON Varianten:\n'+
+        '  { "mode":"auto" }\n'+
+        '  { "mode":"mqtt" }\n'+
+        '  { "mode":"disabled" }\n'+
+        '  { "command":"on", "color":"#00FF00" }\n'+
+        '  { "command":"off" }\n\n'+
+        '# Regeln\n'+
+        '- mode setzt Betriebsart (auto|mqtt|disabled).\n'+
+        '- on/off (oder command) wirkt nur wenn aktueller Modus mqtt ist.\n'+
+        '- Farbe nur zusammen mit Einschalten (on oder command:on); Format #RRGGBB.\n'+
+        '- /on und /color spiegeln den echten Status (Auto Änderungen sofort).\n\n'+
+        '# Weitere Topics\n'+
+        base+'/status            (Online/Offline)\n'+
+        base+'/time              (Zeit HH:MM)\n'+
+        base+'/brightness/set    (1-100)\n\n'+
+        '# Home Assistant\n'+
+        'Nutze /on als state_topic, /mode für Verfügbarkeit/Modus, /color optional als Attribut.')
     );
     showModal('MQTT Hilfe', body);
   }
@@ -873,12 +1061,46 @@
   function viewMarkets(){
     const d=State.dashboard||{};
     const form=h('form',{onsubmit:e=>{e.preventDefault();saveMarkets(form);}});
-    const btcSel=h('select',{name:'btc'}, h('option',{value:'off'},'Aus'), h('option',{value:'auto'},'Automatisch'));
-    const msciSel=h('select',{name:'msci'}, h('option',{value:'off'},'Aus'), h('option',{value:'auto'},'Automatisch'));
-    setTimeout(()=>{ btcSel.value=d.marketBtcMode||'off'; msciSel.value=d.marketMsciMode||'off'; },0);
-    form.appendChild(labelWrap('BTC',btcSel));
-    form.appendChild(labelWrap('MSCI',msciSel));
-    return card('Börsenkurse',form,h('button',{type:'submit'},'Speichern'));
+    // Draft state (so UI Auswahl nicht sofort durch Dashboard Refresh überschrieben wird)
+    if(!State.marketDraft) State.marketDraft={};
+    const btcWrap=h('div',{}); btcWrap.dataset.mode= State.marketDraft.btc || (d.marketBtcMode||'off');
+    const msciWrap=h('div',{}); msciWrap.dataset.mode= State.marketDraft.msci || (d.marketMsciMode||'off');
+    function makeModeRow(wrap,label){
+      const row=h('div',{class:'inline-btns mode-buttons'});
+      const name=label.toLowerCase();
+      const hidden=h('input',{type:'hidden',name:name,value:wrap.dataset.mode});
+      const modes=[['auto','AUTO'],['off','AUS']];
+      modes.forEach(([m,txt])=>{
+        const btn=h('button',{type:'button',class:'mini'+(wrap.dataset.mode===m?' active':''),onclick:()=>{
+          if(wrap.dataset.mode===m) return; // kein Wechsel nötig
+          wrap.dataset.mode=m;
+          State.marketDraft[name]=m;
+          hidden.value=m;
+          // Active Klassen aktualisieren
+          row.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+        }},txt);
+        row.appendChild(btn);
+      });
+      form.appendChild(labelWrap(label,row));
+      form.appendChild(hidden);
+    }
+  makeModeRow(btcWrap,'BTC');
+  makeModeRow(msciWrap,'MSCI');
+  const marketActions=h('div',{class:'actions'});
+  const mSave=h('button',{type:'submit'},'Speichern');
+  const mInfo=h('button',{type:'button',class:'btn-info',onclick:()=>showMarketsInfo()},'Info');
+  marketActions.appendChild(mSave); marketActions.appendChild(mInfo);
+  form.appendChild(marketActions);
+    // Hidden inputs on submit
+  // submit no longer needs to inject hidden inputs (kept in sync live)
+    return card('Börsenkurse',form);
+  }
+  function showMarketsInfo(){
+    const txt=`Lassen Sie durch die Wörter BTC und MSCI Ihre RemindiClock die Kursentwicklung des aktuellen Tages anzeigen. Im Falle einer Änderung von +/- 0.5 % oder mehr werden die Wörter entsprechend rot (fallend) oder grün (steigend) angezeigt. Der Kurs des Bitcoin bezieht sich dabei auf die Entwicklung in den letzten 24h, MSCI bezieht sich auf die Entwicklung des ETF iShares Core MSCI World seit dem letzten Börsenschluss (Abend des letzten Werktags). Das Wort MSCI ist am Wochenende deaktiviert.\n\nHinweis: Die auf der Uhr angezeigten Wörter dienen ausschließlich zu dekorativen Zwecken.\nDie Daten stammen aus öffentlichen Schnittstellen, deren Richtigkeit, Aktualität und Verfügbarkeit nicht jederzeit gewährleistet werden kann. Es handelt sich nicht um eine verbindliche Kursanzeige. Die Anzeige darf nicht als Grundlage für finanzielle Entscheidungen verwendet werden. Jegliche Gewährleistung oder Haftung für die angezeigten Wertentwicklung ist ausgeschlossen.`;
+    const body=document.createElement('div');
+    txt.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
+    showModal('Börsen Info', body);
   }
 
   function field(label,name,type='text',value='',readonly){
@@ -996,10 +1218,10 @@
       }
       await api('/api/address',{method:'POST',body:JSON.stringify(data)});
         toast('Adresse + Standort übernommen','success');
-  // Nach Adresseingabe direkt zu Schritt 2 (Abfall) wechseln
+  // Nach Adresseingabe direkt zu Schritt 3 (Abfall) wechseln
   await refreshDashboard();
   State.wizardMode=true;
-  State.step=2;
+  State.step=3;
   render();
     }catch(e){ toast('Speichern fehlgeschlagen','error'); }
   }
@@ -1022,26 +1244,80 @@
     }catch(e){ toast('Übernahme fehlgeschlagen','error'); }
   }
   async function pollForStage(){
+    // Legacy Funktion wird jetzt durch gezielte Poll-Steuerung ersetzt.
+    // Beibehalten als Wrapper für Kompatibilität: führt genau einen Poll aus.
+    await targetedPollOnce();
+  }
+  // Neue Poll-Variablen
+  if(!State.pollMode){ State.pollMode='none'; State.nextPollTs=0; State.pollAttempts=0; }
+  async function targetedPollOnce(){
+    if(!State.wizardMode) return;
     try {
       const dash = await api('/api/dashboard');
+      const prevStage = State.dashboard?.stage;
+      const prevWasteValid = !!State.dashboard?.wasteEvents;
       State.dashboard = dash;
-  if(State.wizardMode){
-        const st = dash.stage;
-    if(st==='wifi') State.step=0;
-    else if(st==='address') State.step=1;
-    else if(st==='waste' && !State.skipWaste) State.step=2; // nur anzeigen wenn nicht übersprungen
-    else if(st==='done'){
-          // Backend DONE: für neue Browser-Sessions Wizard sofort verlassen
-          if(localStorage.getItem('rcWizardDone')!=='1') localStorage.setItem('rcWizardDone','1');
-          State.wizardMode=false; State.view='Dashboard';
-        }
+      const st = dash.stage;
+      if(st==='wifi'){
+        const looksLikeSetup = dash.apMode || !dash.online || !dash.wifi_ssid;
+        if(looksLikeSetup){ State.step=0; }
+        // sonst Schritt beibehalten (kein Rücksprung)
       }
-      // Fokus schützen: Ab Schritt 3 keine erzwungene Re-Renders durch Poll, außer Schritt hat sich geändert
-      if(!(State.wizardMode && State.step>=3 && dash.stage==='done')){
+      else if(st==='adminpass') State.step=1;
+  else if(st==='address') State.step=2;
+      else if(st==='waste' && !State.skipWaste) State.step=3;
+  else if(st==='waste' && State.skipWaste) { State.step=4; }
+  else if(st==='events') State.step=4;
+  else if(st==='markets') State.step=5;
+  else if(st==='review') State.step=6;
+      else if(st==='done'){
+        if(localStorage.getItem('rcWizardDone')!=='1') localStorage.setItem('rcWizardDone','1');
+        State.wizardMode=false; State.view='Dashboard';
+      }
+      // Fokus-Schutz für alle Formular-Schritte (0=wifi,1=address,2=waste,3=events)
+      const ae=document.activeElement;
+      const blockNames=['ssid','password','addrCity','addrPostal','ical','birthday_name','birthday_date','single_name','single_date','series_name','date'];
+      const isFocus = ae && ae.tagName==='INPUT' && blockNames.includes(ae.name);
+      const stageChanged = prevStage!==dash.stage;
+      const gotWaste = !prevWasteValid && !!dash.wasteEvents;
+      // Erweiterter Edit-Schutz speziell für Schritt 3 (Termine & Geburtstage):
+      // Mobile Datepicker entziehen oft den Fokus -> zusätzlich letzte Aktivität & editingActive berücksichtigen
+      const recentInput = Date.now() - (State.lastInputActivity||0) < 8000; // 8s Schonfrist
+  const inEventsStep = State.wizardMode && State.step===4;
+      const suppress = inEventsStep && (isFocus || State.editingActive || recentInput);
+      if(stageChanged || gotWaste || (!suppress && !isFocus)){
         render();
       }
-    } catch(e) {}
-    if(State.wizardMode) setTimeout(pollForStage,3000);
+    }catch(e){ }
+  }
+  function schedulePoll(mode, delayMs){
+    State.pollMode=mode; State.nextPollTs=Date.now()+delayMs; State.pollAttempts=0;
+  }
+  function continuePoll(delayMs){ State.nextPollTs=Date.now()+delayMs; }
+  function stopPoll(){ State.pollMode='none'; }
+  // Haupt-Poll Schleife (leichtgewichtig)
+  if(!window.__wizPollLoop){
+    window.__wizPollLoop = setInterval(async ()=>{
+      if(!State.wizardMode || State.pollMode==='none') return;
+      if(Date.now() < State.nextPollTs) return;
+      State.pollAttempts++;
+      await targetedPollOnce();
+      // Logik pro Modus
+      if(State.pollMode==='wifi'){ // warten bis Stage != wifi
+        if(State.dashboard?.stage!=='wifi'){ stopPoll(); return; }
+        if(State.pollAttempts>15){ stopPoll(); return; } // Timeout ~ anpassbar
+        continuePoll(1500);
+      } else if(State.pollMode==='waste'){ // warten bis Events da oder Stage nicht mehr waste
+        if(State.dashboard?.wasteEvents || State.dashboard?.stage!=='waste'){
+          State.waitWasteImport=false;
+          stopPoll();
+          return;
+        }
+        // Poll bis zu ~2 Minuten (60 * 1.8s)
+        if(State.pollAttempts>60){ State.pollAttempts=0; }
+        continuePoll(1800);
+      }
+    },400);
   }
   async function refreshDashboard(force, opts){
   opts=opts||{}; const suppressWizard=!!opts.suppressWizard;
@@ -1079,16 +1355,29 @@
     if(State.wizardMode){
       const st=State.dashboard?.stage;
       if(State.waitWasteImport){
-        if(State.dashboard?.wasteEvents){ State.waitWasteImport=false; }
-        else { State.step=2; }
+        // Beende Wartezustand, sobald Events da sind ODER der Server die Stage weitergeschaltet hat
+        if(State.dashboard?.wasteEvents || State.dashboard?.stage !== 'waste'){
+          State.waitWasteImport=false;
+        } else {
+          State.step=3; // während des Imports auf dem Abfall-Schritt verbleiben
+        }
       }
       if(!State.waitWasteImport){
-    if(st==='wifi'){ State.step=0; }
-    else if(st==='address'){ State.step=1; }
-    else if(st==='waste' && !State.skipWaste){ State.step=2; }
+    if(st==='wifi'){
+      const looksLikeSetup = State.dashboard?.apMode || !State.dashboard?.online || !State.dashboard?.wifi_ssid;
+      if(looksLikeSetup){ State.step=0; }
+    }
+  else if(st==='adminpass'){ State.step=1; }
+  else if(st==='address'){ State.step=2; }
+    else if(st==='waste' && !State.skipWaste){ State.step=3; }
+  else if(st==='waste' && State.skipWaste){ State.step=4; }
+  else if(st==='events'){ State.step=4; }
+  else if(st==='markets'){ State.step=5; }
+  else if(st==='review'){ State.step=6; }
     else if(st==='done'){
           if(localStorage.getItem('rcWizardDone')!=='1') localStorage.setItem('rcWizardDone','1');
-          State.wizardMode=false; State.view='Dashboard';
+          if(State.dashboard && State.dashboard.authRequired && !State.dashboard.authed){ State.wizardMode=true; State.step=5; }
+          else { State.wizardMode=false; State.view='Dashboard'; }
         }
       }
     }
@@ -1103,21 +1392,26 @@
         });
       }
     }
-  // Skip re-render if user actively editing (any view) and no stage transition occurred
-  if(!force && State.editingActive && prevStage===newStage && (Date.now()-State.lastInputActivity)<5000){
-    return; // underlying data updated, UI stays for smoother typing
-  }
-  // Prevent wizard step 3 form clearing: do not re-render unless stage changed or user navigates
-  if(!force && State.wizardMode && State.step>=3 && prevStage===newStage){
-    return;
-  }
+  // Delta-basiertes Rendern: Nur wenn Stage wechselt, neue Waste Events eintreffen oder explizit force
+  const gotWaste = !State.dashboard?.__prevWasteValid && !!State.dashboard?.wasteEvents;
+  State.dashboard.__prevWasteValid = !!State.dashboard?.wasteEvents;
+  const ae=document.activeElement; const focusInputs=['ssid','password','addrCity','addrPostal','ical','birthday_name','birthday_date','single_name','single_date','series_name','date'];
+  const focusBlock = ae && ae.tagName==='INPUT' && focusInputs.includes(ae.name);
+  const recentInput = Date.now() - (State.lastInputActivity||0) < 8000;
+  const inEventsStep = State.wizardMode && State.step===4;
+  const editingHold = inEventsStep && (focusBlock || State.editingActive || recentInput);
+  if(force || prevStage!==newStage || gotWaste || (!editingHold && !focusBlock)){
     render();
   }
-  function startDashboardLoop(){ if(State.dashTimer) return; State.dashTimer=setInterval(()=>{ if(State.wizardMode) refreshDashboard(false); },5000);} 
+  }
+  // Dashboard Loop nur außerhalb des Wizards aktiv
+  function startDashboardLoop(){ if(State.dashTimer) return; State.dashTimer=setInterval(()=>{ if(!State.wizardMode) refreshDashboard(false); },5000);} 
   function stopDashboardLoop(){ if(State.dashTimer){ clearInterval(State.dashTimer); State.dashTimer=null; } }
+  // Während Wizard deaktivieren wir die Dashboard-Schleife vollständig
+  if(State.wizardMode){ stopDashboardLoop(); }
   async function factoryReset(){
     // Zweite Sicherheitsabfrage (erste in factoryResetConfirm) bleibt für direkte Aufrufe bestehen
-    if(confirm('Wirklich zurücksetzen?')) {
+  if(confirm('Zurücksetzen und neu starten?')) {
       try {
         // Lokale Wizard-Flags sofort löschen, damit nach Reload Wizard wieder startet
         localStorage.removeItem('rcWizardDone');
@@ -1125,7 +1419,7 @@
         // UI direkt in Wizard-Modus versetzen (falls Gerät etwas verzögert neu startet)
         State.wizardMode=true; State.skipWaste=false; State.step=0; State.view=null; render();
         await api('/api/settings/factory-reset',{method:'POST'});
-        toast('Reset, Neustart...','warn');
+    toast('Werkseinstellungen aktiviert. Gerät startet neu...','warn');
     beginRebootWatch(true);
       } catch(e){ /* ignore */ }
     }
@@ -1156,8 +1450,37 @@
     try{ await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify(payload)}); toast('Gespeichert','success'); await refreshDashboard(true); }
     catch(e){ toast('Speichern fehlgeschlagen','error'); } finally { done(); }
   }
-  async function importWaste(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.ical})}); toast('Kalender gespeichert','success'); State.waitWasteImport=true; State.step=2; State.wasteIcalDraft=d.ical; await refreshDashboard(); render(); let tries=0; const poll=async()=>{ tries++; await refreshDashboard(); if(State.dashboard?.wasteEvents || tries>8){ render(); } else setTimeout(poll,1200); }; poll(); }catch(e){ toast('Fehler beim Import','error'); } }
-  async function saveWaste(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.url})}); toast('Abfall iCal gespeichert','success'); State.waitWasteImport=true; State.step=2; await refreshDashboard(); render(); let tries=0; const poll=async()=>{ tries++; await refreshDashboard(); if(State.dashboard?.wasteEvents || tries>8){ render(); } else setTimeout(poll,1200); }; poll(); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
+  // entfernt: veraltete Import-Implementierung mit doppelter Definition
+  // Ersetze ad-hoc Poll-Logik durch gezielten Poll Mode
+  async function importWaste(form){
+    const d=Object.fromEntries(new FormData(form).entries());
+    try{
+      await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.ical})});
+      toast('Kalender gespeichert','success');
+      State.waitWasteImport=true;
+  State.step=3; // während Import im Abfall-Schritt bleiben
+  State.wasteImportStartedAt=Date.now();
+  // einmalig direkt refreshen, falls Backend sehr schnell antwortet
+  await refreshDashboard(true);
+      State.wasteIcalDraft=d.ical;
+      schedulePoll('waste',800);
+  // Fallback: nach 120s Warteflag zurücksetzen, damit UI nicht hängen bleibt
+  setTimeout(()=>{ if(State.waitWasteImport && State.dashboard?.stage!=='waste'){ State.waitWasteImport=false; render(); } }, 120000);
+    }catch(e){ toast('Fehler beim Import','error'); }
+  }
+  async function saveWaste(form){
+    const d=Object.fromEntries(new FormData(form).entries());
+    try{
+      await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.url})});
+      toast('Abfall iCal gespeichert','success');
+      State.waitWasteImport=true;
+  State.step=3; // während Import im Abfall-Schritt bleiben
+  State.wasteImportStartedAt=Date.now();
+  await refreshDashboard(true);
+      schedulePoll('waste',800);
+  setTimeout(()=>{ if(State.waitWasteImport && State.dashboard?.stage!=='waste'){ State.waitWasteImport=false; render(); } }, 120000);
+    }catch(e){ toast('Speichern fehlgeschlagen','error'); }
+  }
   async function saveWasteColors(form){ const d=Object.fromEntries(new FormData(form).entries()); const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); try{ await api('/api/waste/colors',{method:'POST',body:JSON.stringify(d)}); toast('Farben gespeichert','success'); await refreshDashboard(); render(); }catch(e){ toast('Fehler beim Speichern','error'); } finally { done(); } }
   async function saveAbfallMode(form){ const d=Object.fromEntries(new FormData(form).entries()); const mode=(d.abfall_mode==='disabled')?'disabled':'auto'; try{ await api('/api/settings/weather-words',{method:'POST',body:JSON.stringify({ABFALL:{enabled:mode==='auto'}})}); toast('ABFALL Modus gespeichert','success'); await refreshDashboard(true); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
   function setAbfallMode(mode,wrap){ const btns=wrap.querySelectorAll('button'); btns.forEach(b=>{ b.classList.remove('active'); if(b.getAttribute('data-mode')===mode) b.classList.add('active'); }); const form=wrap.closest('form'); const hidden=form.querySelector('input[name=abfall_mode]'); hidden.value=mode; }
@@ -1165,7 +1488,8 @@
     if(!confirm('Alle importierten Abfall-Termine löschen und neuen iCal Link importieren?')) return;
     State.reimportInProgress=true;
     try{
-      const res = await api('/api/waste/clear',{method:'POST'});
+  // Löschen: URL entfernen (keepUrl=0) aber Bestätigung behalten (keepConfirm=1) damit Stage nicht zurückspringt
+  const res = await api('/api/waste/clear?keepConfirm=1',{method:'POST'});
       if(res && res.cleared){
         toast('Abfall-Termine gelöscht','success');
         // Lokale Events sofort entfernen für direkte UI-Reaktion
@@ -1176,8 +1500,13 @@
           // Auch Kennzeichen zurücksetzen, damit Render keine alten Daten anzeigt
           State.dashboard.waste = false;
           State.dashboard.waste_ok = false;
-          State.dashboard.wasteConfirmed = false;
-          State.dashboard.wasteIcalUrl = null;
+          // URL entfernt, Confirmation behalten -> Stage bleibt 'done'
+          // Nach dem Löschen sofort Import-Ansicht mit Provider-Hinweisen erneut zeigen
+          State.view='Settings';
+          State.settingsTab='waste';
+          State.wasteIcalDraft='';
+          // Scroll nach oben für sichtbare Hinweise
+          setTimeout(()=>{ window.scrollTo(0,0); },10);
         }
         render();
         // Dashboard aktualisieren ohne Wizard-Auto-Umschaltung
@@ -1188,9 +1517,46 @@
     }catch(e){ toast('Fehler beim Neu-Import','error'); }
     finally { State.reimportInProgress=false; }
   }
-  async function confirmWasteSetup(form){ try{ if(form){ const d=Object.fromEntries(new FormData(form).entries()); State.pendingWasteColors=d; await api('/api/waste/colors',{method:'POST',body:JSON.stringify(d)}); } await api('/api/waste/colors',{method:'POST',body:JSON.stringify({confirm:true})}); toast('Abfall-Konfiguration bestätigt','success'); State.pendingWasteColors=null; await refreshDashboard(); State.step=3; render(); }catch(e){ toast('Fehler bei Bestätigung','error'); } }
+  async function confirmWasteSetup(form){
+    try{
+      if(form){
+        const d=Object.fromEntries(new FormData(form).entries());
+        State.pendingWasteColors=d;
+        await api('/api/waste/colors',{method:'POST',body:JSON.stringify(d)});
+      }
+      await api('/api/waste/colors',{method:'POST',body:JSON.stringify({confirm:true})});
+      toast('Abfall-Konfiguration bestätigt','success');
+      State.pendingWasteColors=null;
+      // Nach Bestätigung zum nächsten Schritt (Termine & Geburtstage)
+      sendWizardStage('events');
+      await refreshDashboard(true);
+      State.step=4;
+      render();
+    }catch(e){
+      toast('Fehler bei Bestätigung','error');
+    }
+  }
   async function saveWasteColor(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/waste/color',{method:'POST',body:JSON.stringify({color:d.color})}); toast('Farbe gespeichert','success'); await refreshDashboard(true); }catch(e){ toast('Fehler beim Speichern','error'); } }
-  async function saveMarkets(form){ const d=Object.fromEntries(new FormData(form).entries()); try{ await api('/api/settings/markets',{method:'POST',body:JSON.stringify(d)}); toast('Börsenkurse gespeichert','success'); State.step=5; render(); }catch(e){ toast('Speichern fehlgeschlagen','error'); } }
+  async function saveMarkets(form){
+    const d=Object.fromEntries(new FormData(form).entries());
+    try{
+      await api('/api/settings/markets',{method:'POST',body:JSON.stringify(d)});
+      toast('Börsenkurse gespeichert','success');
+      // Aktuelle Auswahl im State beibehalten
+      if(!State.dashboard) State.dashboard={};
+      State.dashboard.marketBtcMode=d.btc;
+      State.dashboard.marketMsciMode=d.msci;
+  // Draft verwerfen – Dashboard Wert ist nun maßgeblich
+  if(State.marketDraft){ delete State.marketDraft.btc; delete State.marketDraft.msci; }
+      // Serverseitigen Status nachladen um Konsistenz zu sichern
+      await refreshDashboard(true);
+      if(State.wizardMode && State.step===4){
+        State.step=5; // letzter Schritt
+        sendWizardStage('review');
+      }
+      render();
+    }catch(e){ toast('Speichern fehlgeschlagen','error'); }
+  }
   // --- Events/Birthdays API integration ---
   async function loadEvents(){
     try { const res= await api('/api/events'); State.events = res; State.eventsLoaded=true; render(); }
@@ -1201,8 +1567,11 @@
       const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn);
       const payload={}; if(d.name) payload.name=d.name; try{ await putEvent(d.id,payload); toast('Aktualisiert','success'); State.editEvent=null; loadEvents(); form.reset(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done(); }
       return;
-    }
-    if(!d.date){ toast('Datum fehlt','warn'); return; } const p=parseDateParts(d.date); if(!p){ toast('Ungültiges Datum','error'); return; }
+  }
+  // Wizard uses birthday_date as field name -> map to date
+  if(!d.name && d.birthday_name) d.name = d.birthday_name;
+  if(!d.date && d.birthday_date) d.date = d.birthday_date;
+  if(!d.date){ toast('Datum fehlt','warn'); return; } const p=parseDateParts(d.date); if(!p){ toast('Ungültiges Datum','error'); return; }
     const payload={type:'birthday', name:d.name||'Geburtstag', month:p.m, day:p.d}; const btn=form.querySelector('button[type=submit]'); const done2=setLoading(btn); try{ await postEvent(payload); toast('Geburtstag gespeichert','success'); form.reset(); loadEvents(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done2(); } }
   async function postEvent(obj){
     try{
@@ -1217,11 +1586,26 @@
       return true;
     }catch(e){ console.error('[Events] post fail',e); throw e; }
   }
-  async function submitSingle(form){ const d=Object.fromEntries(new FormData(form).entries()); if(d.id){ const payload={}; const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); if(d.name) payload.name=d.name; if(d.date) payload.date=d.date; if(d.color) payload.color=d.color; try{ await putEvent(d.id,payload); toast('Aktualisiert','success'); State.editEvent=null; loadEvents(); form.reset(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done(); } return; }
-    if(!d.date){ toast('Datum fehlt','warn'); return;} const payload={type:'single', name:d.name||'Termin', date:d.date, color:d.color||'#ff8800'}; const btn=form.querySelector('button[type=submit]'); const done2=setLoading(btn); try{ await postEvent(payload); toast('Termin gespeichert','success'); form.reset(); loadEvents(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done2(); } }
+  async function submitSingle(form){ const d=Object.fromEntries(new FormData(form).entries()); if(d.id){ const payload={}; const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); if(!d.name && d.single_name) d.name=d.single_name; if(d.name) payload.name=d.name; if(d.date) payload.date=d.date; if(d.single_date && !payload.date) payload.date=d.single_date; if(d.color) payload.color=d.color; try{ await putEvent(d.id,payload); toast('Aktualisiert','success'); State.editEvent=null; loadEvents(); form.reset(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done(); } return; }
+    // Wizard uses single_date as field name -> map
+    if(!d.name && d.single_name) d.name = d.single_name;
+    if(!d.date && d.single_date) d.date = d.single_date;
+    if(!d.date){ toast('Datum fehlt','warn'); return;}
+    // Datum normalisieren: akzeptiere YYYY-MM-DD oder DD.MM.YYYY
+    let iso = d.date.trim();
+    if(/^[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{2,4}$/.test(iso)){
+      const parts=iso.split('.'); let dd=parseInt(parts[0],10); let mm=parseInt(parts[1],10); let yy=parseInt(parts[2],10); if(yy<100){ yy += (yy>=70?1900:2000); }
+      if(yy>1900 && mm>=1&&mm<=12 && dd>=1&&dd<=31){ iso = `${yy.toString().padStart(4,'0')}-${mm.toString().padStart(2,'0')}-${dd.toString().padStart(2,'0')}`; }
+    }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)){ toast('Ungültiges Datum','error'); return; }
+    // Zusätzlich year/month/day mitsenden für Backend-Fallback
+    const y=parseInt(iso.substring(0,4),10), m=parseInt(iso.substring(5,7),10), da=parseInt(iso.substring(8,10),10);
+    const payload={type:'single', name:d.name||'Termin', date:iso, year:y, month:m, day:da, color:d.color||'#ff8800'};
+    const btn=form.querySelector('button[type=submit]'); const done2=setLoading(btn); try{ await postEvent(payload); toast('Termin gespeichert','success'); form.reset(); loadEvents(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done2(); } }
   function collectWeekdays(form){ return Array.from(form.querySelectorAll('input[name=wd]:checked')).map(i=>parseInt(i.value)); }
   async function submitSeries(form){ const d=Object.fromEntries(new FormData(form).entries()); const wds=collectWeekdays(form); if(d.id){ const payload={}; const btn=form.querySelector('button[type=submit]'); const done=setLoading(btn); if(d.name) payload.name=d.name; if(d.recur) payload.recur=d.recur; if(wds.length) payload.weekdays=wds; if(d.color) payload.color=d.color; if(d.recur==='monthly' && d.monthly_pos) payload.monthly_pos=parseInt(d.monthly_pos); try{ await putEvent(d.id,payload); toast('Aktualisiert','success'); State.editEvent=null; loadEvents(); form.reset(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done(); } return; }
-    if(!wds.length){ toast('Mindestens ein Wochentag','warn'); return; } const payload={type:'series', name:d.name||'Serie', recur:d.recur||'weekly', weekdays:wds, color:d.color||'#33aaff'}; if(d.recur==='monthly' && d.monthly_pos) payload.monthly_pos=parseInt(d.monthly_pos); const btn=form.querySelector('button[type=submit]'); const done2=setLoading(btn); try{ await postEvent(payload); toast('Serie gespeichert','success'); form.reset(); toggleMonthlyPos(form); loadEvents(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done2(); } }
+  if(!d.name && d.series_name) d.name = d.series_name;
+  if(!wds.length){ toast('Mindestens ein Wochentag','warn'); return; } const payload={type:'series', name:d.name||'Serie', recur:d.recur||'weekly', weekdays:wds, color:d.color||'#33aaff'}; if(d.recur==='monthly' && d.monthly_pos) payload.monthly_pos=parseInt(d.monthly_pos); const btn=form.querySelector('button[type=submit]'); const done2=setLoading(btn); try{ await postEvent(payload); toast('Serie gespeichert','success'); form.reset(); toggleMonthlyPos(form); loadEvents(); }catch(e){ toast(e.message||'Fehler','error'); } finally { done2(); } }
   async function putEvent(id,obj){ try{ let r= await fetch('/api/events?id='+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)}); if(!r.ok){ const payload='body='+encodeURIComponent(JSON.stringify(obj)); r= await fetch('/api/events?id='+id,{method:'PUT',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:payload}); } if(!r.ok) throw new Error('HTTP '+r.status); return true; }catch(e){ console.error('[Events] put fail',e); throw e; } }
   async function deleteEvent(id){ if(!confirm('Löschen?')) return; try{ await fetch('/api/events?id='+id,{method:'DELETE'}); toast('Gelöscht','success'); loadEvents(); }catch(e){ toast('Löschen fehlgeschlagen','error'); } }
   function toggleMonthlyPos(form){ const sel=form.querySelector('select[name=recur]'); const mp=form.querySelector('select[name=monthly_pos]'); if(!sel||!mp) return; if(sel.value==='monthly'){ mp.style.display=''; } else { mp.style.display='none'; mp.value=''; } }
@@ -1319,13 +1703,8 @@
   State.mqttNeedsRestart=true; // persist across renders
     const box=document.createElement('div');
     box.id='restart-hint';
-    box.style.marginTop='12px';
-    box.style.padding='10px';
-    box.style.border='1px solid #f0ad4e';
-    box.style.background='#fff8e5';
-    box.style.borderRadius='6px';
-    box.style.fontSize='0.85rem';
-    box.innerHTML='<strong>Neustart erforderlich:</strong> Die neuen MQTT Einstellungen werden erst nach einem Neustart aktiv. ';
+  box.className='restart-hint';
+  box.innerHTML='<strong>Neustart erforderlich:</strong> Die neuen MQTT Einstellungen werden erst nach einem Neustart aktiv.';
     const btn=document.createElement('button');
     btn.type='button';
     btn.textContent='Jetzt neu starten';
@@ -1354,7 +1733,7 @@
   }
 
   // Init
-  function pushAppState(){ history.replaceState({app:1, step:State.step, view:State.view, sub:State.subView, wizard:State.wizardMode},''); }
+  function pushAppState(){/* legacy noop */}
   window.addEventListener('popstate',e=>{
     if(e.state && e.state.app){
       State.wizardMode=e.state.wizard;
@@ -1363,21 +1742,49 @@
       State.subView=e.state.sub;
       render();
     } else {
-      // stay inside app
-      pushAppState();
+      // If no state (e.g., user opened with deep hash) just reinsert current
+      try{ history.replaceState({app:1,wizard:State.wizardMode,step:State.step,view:State.view,sub:State.subView},''); }catch(_){ }
     }
   });
-  if(localStorage.getItem('rcWizardDone')==='1') { State.wizardMode=false; State.view='Dashboard'; }
+  // Wizard-Initialisierung robuster: Nur Wizard anzeigen, wenn Stage wirklich 'wifi' unter AP/ohne Online ist oder explizit noch Pflichtschritte anstehen.
+  if(State.dashboard?.stage==='done' && localStorage.getItem('rcWizardDone')==='1') {
+    State.wizardMode=false; State.view='Dashboard';
+  } else if(State.dashboard?.stage==='wifi') {
+    const looksLikeSetup = State.dashboard?.apMode || !State.dashboard?.online || !State.dashboard?.wifi_ssid;
+    State.wizardMode = !!looksLikeSetup;
+  } else {
+    State.wizardMode=true;
+  }
   if(localStorage.getItem('rcSkipWaste')==='1') { State.skipWaste=true; }
   pollForStage();
   refreshDashboard(true);
   render();
-  pushAppState();
-  startDashboardLoop();
+  // Initial history state already replaced in first render
+  // Loop nur starten wenn Wizard bereits abgeschlossen ist
+  if(!State.wizardMode) startDashboardLoop();
   // --- Global input activity tracking to prevent focus loss ---
   document.addEventListener('focusin',e=>{ if(e.target && ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){ State.editingActive=true; }});
   document.addEventListener('focusout',e=>{ if(e.target && ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){ setTimeout(()=>{ if(!document.activeElement || !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) State.editingActive=false; },120); }});
   document.addEventListener('input',e=>{ if(e.target && ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)){ State.lastInputActivity=Date.now(); }});
+  // Pointer-Interaktion ebenfalls als Aktivität zählen (relevant für mobile Datepicker, die Fokus entziehen)
+  document.addEventListener('pointerdown',e=>{ if(e.target && e.target.tagName==='INPUT'){ State.lastInputActivity=Date.now(); }});
+
+  // Auto-Logout nach Inaktivität (Client-seitig), ergänzt serverseitiges 1h-Timeout
+  State.lastActivityTs = Date.now();
+  const bumpActivity = ()=>{ State.lastActivityTs = Date.now(); };
+  ['pointerdown','keydown','wheel','touchstart','focusin','input'].forEach(evt=>document.addEventListener(evt,bumpActivity,{passive:true}));
+  const INACT_MS = 50*60*1000; // 50 Minuten
+  setInterval(async ()=>{
+    if(!State.dashboard || !State.dashboard.authRequired) return;
+    if(State.dashboard && State.dashboard.authed){
+      const idle = Date.now() - (State.lastActivityTs||0);
+      if(idle > INACT_MS){
+        try{ await fetch('/api/auth/logout',{method:'POST'}); }catch(_){ }
+        await refreshDashboard(true);
+        showLoginGate();
+      }
+    }
+  }, 30000);
 
   // Generic loading helper
   function setLoading(btn){
