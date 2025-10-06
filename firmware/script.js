@@ -839,7 +839,67 @@
   const infoBtn=h('button',{type:'button',class:'btn-info',onclick:()=>showWeatherInfo()},'Info');
     actions.appendChild(saveBtn); actions.appendChild(infoBtn);
     f.appendChild(actions);
-    return card('Wetter Wörter (Auto-Modus)',f);
+    const cards=[];
+    cards.push(card('Wetter Wörter (Auto-Modus)',f));
+    // Metrics + Lüften Sensitivität
+    cards.push(buildLueftenCard());
+    const wrap=h('div',{}); cards.forEach(c=>wrap.appendChild(c)); return wrap;
+  }
+  function buildLueftenCard(){
+    const d=State.dashboard||{};
+    const level = d.lueftenLevel||2;
+    function fmt(v,dec=1){ if(v===undefined||v===null) return '—'; return (Math.round(v* Math.pow(10,dec))/Math.pow(10,dec)).toFixed(dec); }
+    const insideTemp = fmt(d.insideTempC,1)+'°C';
+    const insideRH = fmt(d.insideRelHumidity,0)+'%';
+    const insideAbs = fmt(d.insideAbsHumidity,1)+' g/m³';
+    const outsideTemp = fmt(d.outsideTempC,1)+'°C';
+    const outsideRH = fmt(d.outsideRelHumidity,0)+'%';
+    const outsideAbs = fmt(d.outsideAbsHumidity,1)+' g/m³';
+    const diff = (d.lueftenDiff!==undefined)? fmt(d.lueftenDiff,2)+' g/m³':'—';
+    const thOn = (d.lueftenOnThreshold!==undefined)? fmt(d.lueftenOnThreshold,2)+' g/m³':'—';
+    const thOff = (d.lueftenOffThreshold!==undefined)? fmt(d.lueftenOffThreshold,2)+' g/m³':'—';
+    const active = d.lueftenActive? 'AN' : 'AUS';
+    const cont=h('div',{});
+    const tbl=h('table',{class:'metrics'},
+      h('tr',{},h('th',{colspan:3},'Innen')), 
+      h('tr',{},h('td',{},'Temperatur'),h('td',{colspan:2},insideTemp)),
+      h('tr',{},h('td',{},'rel. Feuchte'),h('td',{colspan:2},insideRH)),
+      h('tr',{},h('td',{},'abs. Feuchte'),h('td',{colspan:2},insideAbs)),
+      h('tr',{},h('th',{colspan:3},'Außen')),
+      h('tr',{},h('td',{},'Temperatur'),h('td',{colspan:2},outsideTemp)),
+      h('tr',{},h('td',{},'rel. Feuchte'),h('td',{colspan:2},outsideRH)),
+      h('tr',{},h('td',{},'abs. Feuchte'),h('td',{colspan:2},outsideAbs)),
+      h('tr',{},h('th',{colspan:3},'Lüften Logik')),
+      h('tr',{},h('td',{},'Differenz (in-au)'),h('td',{colspan:2},diff)),
+      h('tr',{},h('td',{},'Schwelle AN'),h('td',{colspan:2},thOn)),
+      h('tr',{},h('td',{},'Schwelle AUS'),h('td',{colspan:2},thOff)),
+      h('tr',{},h('td',{},'Anzeige'),h('td',{colspan:2},active))
+    );
+    cont.appendChild(tbl);
+    const form=h('form',{onsubmit:e=>{e.preventDefault();saveLueften(form);}});
+    const slider=h('input',{type:'range',min:1,max:5,value:level,name:'level',oninput:e=>{lvlVal.textContent='Stufe '+e.target.value;}});
+    const lvlVal=h('span',{},'Stufe '+level);
+    form.appendChild(h('label',{class:'field'},'Sensitivität LÜFTEN', slider, lvlVal));
+  const actionsRow=h('div',{class:'actions'});
+  actionsRow.appendChild(h('button',{type:'submit'},'Speichern'));
+  // Aktualisieren Button (grau wie Info Buttons -> reuse btn-info class)
+  actionsRow.appendChild(h('button',{type:'button',class:'btn-info',onclick:async()=>{ await refreshDashboard(true); render(); }},'Aktualisieren'));
+  form.appendChild(actionsRow);
+    cont.appendChild(form);
+    return card('LÜFTEN & Klima', cont);
+  }
+  async function saveLueften(f){
+    const lvl=parseInt(f.level.value,10);
+    // Sende Level sowohl als Query als auch als Body Plain (maximale Kompatibilität)
+    try{
+      await api('/api/settings/lueften?level='+encodeURIComponent(lvl),{method:'POST',body:String(lvl)});
+    }catch(e){
+      // Fallback: nochmal nur mit Query ohne Body
+      await api('/api/settings/lueften?level='+encodeURIComponent(lvl),{method:'POST'});
+    }
+  await refreshDashboard(true);
+  render();
+  toast('Lüften Sensitivität aktualisiert');
   }
   function showWeatherInfo(){
     const text=`Die Wetter Wörter REGEN, SCHNEE und WIND zeigen die erwarteten Wetterereignisse in den kommenden 3 Stunden für deinen Standort.\n\nDas Wort GIESSEN gilt den Gartenpflanzen. Es leuchtet auf, sofern es gestern nicht geregnet hat und draußen warm war und es heute ebenfalls draußen warm ist und nicht regnen wird.\n\nDas Wort LÜFTEN zeigt an, dass aktuell eine hohe gemessene Luftfeuchtigkeit im Innerraum vorliegt (zB durch Kochen, Duschen oder längeren Aufenthalt). Sofern die absolute Luftfeuchtigkeit draußen geringer ist als im Innenraum, leuchtet das Wort LÜFTEN. Dadurch kann die Luftqualität verbessert und zB Schimmelbildung im Innenraum vorgebeugt werden.\n\nSie können individuelle Farben für die jeweiligen Wörter einstellen oder diese deaktivieren.`;

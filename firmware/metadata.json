@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.4.0",
+  "latest_version": "0.5.0",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "C7966BFF16D5BB227F642AF242F44E99E15FCD2DDD4E7E39F75D8C30736028EA",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.4.0.txt",
-  "assets_manifest_sha256": "230B824DC2C9C7882DF1006BC000904D1F6280A05D0CDA3570ECF0B8BE6E5BD9",
-  "changelog": "Security Updates .. Version 0.4.0"
+  "firmware_sha256": "E402118F18AD3D64BCA2ECE8195545E39C4BA2886E0B70334320FC3BFB5DCCC7",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.5.0.txt",
+  "assets_manifest_sha256": "0781A1D075CD3236616F1528FF9FAB11903501D1F710D7BD0F31CD213EA5615F",
+  "changelog": "Darstellung Sensorwerte Temperatur und Luftfeuchtigkeit in webUI: Einstellungen > Wetter. Möglichkeit zur Anpassung der Sensitivität LÜFTEN."
 }
