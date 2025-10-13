@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.5.0",
+  "latest_version": "0.6.0",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "E402118F18AD3D64BCA2ECE8195545E39C4BA2886E0B70334320FC3BFB5DCCC7",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.5.0.txt",
-  "assets_manifest_sha256": "0781A1D075CD3236616F1528FF9FAB11903501D1F710D7BD0F31CD213EA5615F",
-  "changelog": "Darstellung Sensorwerte Temperatur und Luftfeuchtigkeit in webUI: Einstellungen > Wetter. Möglichkeit zur Anpassung der Sensitivität LÜFTEN."
+  "firmware_sha256": "66A0826AEC2340E076090DC0C7636FEF1DC53A875427668387EE112506A44D0B",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.6.0.txt",
+  "assets_manifest_sha256": "3DB6CDBD4E8C2385D2D08A6E21046E142DAF4E42EB3F89EDF36716DDBF66108C",
+  "changelog": "Anzeige BTC: Änderung des relevanten Bitcoin Kursverlauf von innerhalb-24h zu seit-Mitternacht. BTC grün/rot zeigt nun die Kursänderung seit lokaler Mitternacht des aktuellen Tages."
 }

@@ -226,11 +226,11 @@
   // Structured address inputs
   if(!State.addrPostal) State.addrPostal = State.dashboard?.postalCode||'';
   if(!State.addrCity) State.addrCity = State.dashboard?.city||'';
-  if(!State.addrCountry) State.addrCountry = State.dashboard?.country||'DE';
+  if(!State.addrCountry) State.addrCountry = State.dashboard?.country||'Deutschland';
   form.appendChild(h('div',{class:'field-row'},
     h('label',{class:'field compact'},'PLZ',h('input',{name:'postalCode',placeholder:'12345',value:State.addrPostal,oninput:e=>{State.addrPostal=e.target.value;}})),
     h('label',{class:'field compact'},'Stadt',h('input',{name:'city',required:true,placeholder:'Stadt',value:State.addrCity,oninput:e=>{State.addrCity=e.target.value;}})),
-    h('label',{class:'field compact'},'Land',h('input',{name:'country',placeholder:'DE',value:State.addrCountry,oninput:e=>{State.addrCountry=e.target.value;}}))
+    h('label',{class:'field compact'},'Land',h('input',{name:'country',placeholder:'Deutschland',value:State.addrCountry,oninput:e=>{State.addrCountry=e.target.value;}}))
   ));
   // Search button & results
   form.appendChild(h('div',{class:'actions'},
@@ -847,7 +847,7 @@
   }
   function buildLueftenCard(){
     const d=State.dashboard||{};
-    const level = d.lueftenLevel||2;
+  const level = d.lueftenLevel||3;
     function fmt(v,dec=1){ if(v===undefined||v===null) return '—'; return (Math.round(v* Math.pow(10,dec))/Math.pow(10,dec)).toFixed(dec); }
     const insideTemp = fmt(d.insideTempC,1)+'°C';
     const insideRH = fmt(d.insideRelHumidity,0)+'%';
@@ -1157,7 +1157,7 @@
     return card('Börsenkurse',form);
   }
   function showMarketsInfo(){
-    const txt=`Lassen Sie durch die Wörter BTC und MSCI Ihre RemindiClock die Kursentwicklung des aktuellen Tages anzeigen. Im Falle einer Änderung von +/- 0.5 % oder mehr werden die Wörter entsprechend rot (fallend) oder grün (steigend) angezeigt. Der Kurs des Bitcoin bezieht sich dabei auf die Entwicklung in den letzten 24h, MSCI bezieht sich auf die Entwicklung des ETF iShares Core MSCI World seit dem letzten Börsenschluss (Abend des letzten Werktags). Das Wort MSCI ist am Wochenende deaktiviert.\n\nHinweis: Die auf der Uhr angezeigten Wörter dienen ausschließlich zu dekorativen Zwecken.\nDie Daten stammen aus öffentlichen Schnittstellen, deren Richtigkeit, Aktualität und Verfügbarkeit nicht jederzeit gewährleistet werden kann. Es handelt sich nicht um eine verbindliche Kursanzeige. Die Anzeige darf nicht als Grundlage für finanzielle Entscheidungen verwendet werden. Jegliche Gewährleistung oder Haftung für die angezeigten Wertentwicklung ist ausgeschlossen.`;
+  const txt=`Lassen Sie durch die Wörter BTC und MSCI Ihre RemindiClock die Kursentwicklung des aktuellen Tages anzeigen. Im Falle einer Änderung von +/- 0.5 % oder mehr werden die Wörter entsprechend rot (fallend) oder grün (steigend) angezeigt. Der Kurs des Bitcoin bezieht sich auf die Entwicklung seit 0:00 Uhr (lokale Zeit), MSCI bezieht sich auf die Entwicklung des ETF iShares Core MSCI World seit dem letzten Börsenschluss (Abend des letzten Werktags). Das Wort MSCI ist am Wochenende deaktiviert.\n\nHinweis: Die auf der Uhr angezeigten Wörter dienen ausschließlich zu dekorativen Zwecken.\nDie Daten stammen aus öffentlichen Schnittstellen, deren Richtigkeit, Aktualität und Verfügbarkeit nicht jederzeit gewährleistet werden kann. Es handelt sich nicht um eine verbindliche Kursanzeige. Die Anzeige darf nicht als Grundlage für finanzielle Entscheidungen verwendet werden. Jegliche Gewährleistung oder Haftung für die angezeigten Wertentwicklung ist ausgeschlossen.`;
     const body=document.createElement('div');
     txt.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
     showModal('Börsen Info', body);
@@ -1327,7 +1327,10 @@
   else if(st==='address') State.step=2;
       else if(st==='waste' && !State.skipWaste) State.step=3;
   else if(st==='waste' && State.skipWaste) { State.step=4; }
-  else if(st==='events') State.step=4;
+  else if(st==='events') {
+        // Bleibe im Abfall-Schritt, solange noch nicht bestätigt wurde
+        if(!State.dashboard?.wasteConfirmed && !State.skipWaste) State.step=3; else State.step=4;
+      }
   else if(st==='markets') State.step=5;
   else if(st==='review') State.step=6;
       else if(st==='done'){
@@ -1431,7 +1434,10 @@
   else if(st==='address'){ State.step=2; }
     else if(st==='waste' && !State.skipWaste){ State.step=3; }
   else if(st==='waste' && State.skipWaste){ State.step=4; }
-  else if(st==='events'){ State.step=4; }
+  else if(st==='events'){ 
+          // Nicht automatisch weiter, solange nicht bestätigt
+          if(!State.dashboard?.wasteConfirmed && !State.skipWaste) State.step=3; else State.step=4;
+        }
   else if(st==='markets'){ State.step=5; }
   else if(st==='review'){ State.step=6; }
     else if(st==='done'){
