@@ -453,10 +453,12 @@
       );
       // Initial aus Dashboard nur falls kein Draft existiert
       if(State.marketDraft.btc===undefined){
-        State.marketDraft.btc = (State.dashboard && State.dashboard.marketBtcMode) || 'off';
+        // Wizard Default: Immer 'auto' anzeigen, wenn Nutzer noch nichts gewählt hat
+        State.marketDraft.btc = 'auto';
       }
       if(State.marketDraft.msci===undefined){
-        State.marketDraft.msci = (State.dashboard && State.dashboard.marketMsciMode) || 'off';
+        // Wizard Default: Immer 'auto' anzeigen, wenn Nutzer noch nichts gewählt hat
+        State.marketDraft.msci = 'auto';
       }
       btcSel.value=State.marketDraft.btc;
       msciSel.value=State.marketDraft.msci;
@@ -466,7 +468,8 @@
       form.appendChild(labelWrap('MSCI', msciSel));
       form.appendChild(h('div',{class:'actions'},
         h('button',{type:'button',class:'secondary',onclick:()=>{ State.step=6; sendWizardStage('review'); render(); }},'Überspringen'),
-        h('button',{type:'submit',onclick:()=>{ State.step=6; sendWizardStage('review'); render(); }},'Speichern & Weiter')
+        // Wichtig: kein onclick auf dem Submit-Button, damit das onsubmit (saveMarkets) zuerst ausgeführt werden kann
+        h('button',{type:'submit'},'Speichern & Weiter')
       ));
       wrap.appendChild(form);
     } else if(State.step===5){
@@ -1523,6 +1526,9 @@
     try{
       await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.ical})});
       toast('Kalender gespeichert','success');
+      // Nutzer hat nun aktiv importiert -> etwaiges früheres Überspringen zurücksetzen
+      try{ localStorage.removeItem('rcSkipWaste'); }catch(_){ }
+      State.skipWaste=false;
       State.waitWasteImport=true;
   State.step=3; // während Import im Abfall-Schritt bleiben
   State.wasteImportStartedAt=Date.now();
@@ -1539,6 +1545,9 @@
     try{
       await api('/api/waste/ical',{method:'POST',body:JSON.stringify({url:d.url})});
       toast('Abfall iCal gespeichert','success');
+      // Nutzer hat nun aktiv importiert -> etwaiges früheres Überspringen zurücksetzen
+      try{ localStorage.removeItem('rcSkipWaste'); }catch(_){ }
+      State.skipWaste=false;
       State.waitWasteImport=true;
   State.step=3; // während Import im Abfall-Schritt bleiben
   State.wasteImportStartedAt=Date.now();
@@ -1616,8 +1625,9 @@
   if(State.marketDraft){ delete State.marketDraft.btc; delete State.marketDraft.msci; }
       // Serverseitigen Status nachladen um Konsistenz zu sichern
       await refreshDashboard(true);
-      if(State.wizardMode && State.step===4){
-        State.step=5; // letzter Schritt
+      // Nach erfolgreichem Speichern im Wizard vom Schritt 5 (Markets) auf 6 (Fertig) wechseln
+      if(State.wizardMode && State.step===5){
+        State.step=6;
         sendWizardStage('review');
       }
       render();

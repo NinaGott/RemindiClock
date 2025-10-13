@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.6.0",
+  "latest_version": "0.6.1",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "66A0826AEC2340E076090DC0C7636FEF1DC53A875427668387EE112506A44D0B",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.6.0.txt",
-  "assets_manifest_sha256": "3DB6CDBD4E8C2385D2D08A6E21046E142DAF4E42EB3F89EDF36716DDBF66108C",
-  "changelog": "Anzeige BTC: Änderung des relevanten Bitcoin Kursverlauf von innerhalb-24h zu seit-Mitternacht. BTC grün/rot zeigt nun die Kursänderung seit lokaler Mitternacht des aktuellen Tages."
+  "firmware_sha256": "9B875177A07F5C85698E5E513D5B20A30AA0473E58F7DD4A1B790956C76F908F",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.6.1.txt",
+  "assets_manifest_sha256": "81839B23EACF5F4F1E5E34ADDA6219EB2CA6E97220A8BC48A5FB9931588E2370",
+  "changelog": "Anzeige BTC: Änderung des relevanten Bitcoin Kursverlauf von innerhalb-24h zu seit-Mitternacht. BTC grün/rot zeigt nun die Kursänderung seit lokaler Mitternacht des aktuellen Tages. Kleiner Bug-fixes durchgeführt."
 }
