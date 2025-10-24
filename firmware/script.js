@@ -517,7 +517,7 @@
       );
       main.appendChild(bottom);
     }
-    main.appendChild(h('footer',{},'RemindiClock © '+new Date().getFullYear()));
+    main.appendChild(h('footer',{},'Remindi © '+new Date().getFullYear()));
     app.appendChild(main);
   }
 
@@ -851,6 +851,7 @@
   function buildLueftenCard(){
     const d=State.dashboard||{};
   const level = d.lueftenLevel||3;
+  const mode = d.lueftenMode||'auto';
     function fmt(v,dec=1){ if(v===undefined||v===null) return '—'; return (Math.round(v* Math.pow(10,dec))/Math.pow(10,dec)).toFixed(dec); }
     const insideTemp = fmt(d.insideTempC,1)+'°C';
     const insideRH = fmt(d.insideRelHumidity,0)+'%';
@@ -858,7 +859,8 @@
     const outsideTemp = fmt(d.outsideTempC,1)+'°C';
     const outsideRH = fmt(d.outsideRelHumidity,0)+'%';
     const outsideAbs = fmt(d.outsideAbsHumidity,1)+' g/m³';
-    const diff = (d.lueftenDiff!==undefined)? fmt(d.lueftenDiff,2)+' g/m³':'—';
+  const diff = (d.lueftenDiff!==undefined)? fmt(d.lueftenDiff,2)+' g/m³':'—';
+  const minAvg3d = (d.lueftenMinAvg3d!==undefined)? fmt(d.lueftenMinAvg3d,2)+' g/m³':'—';
     const thOn = (d.lueftenOnThreshold!==undefined)? fmt(d.lueftenOnThreshold,2)+' g/m³':'—';
     const thOff = (d.lueftenOffThreshold!==undefined)? fmt(d.lueftenOffThreshold,2)+' g/m³':'—';
     const active = d.lueftenActive? 'AN' : 'AUS';
@@ -876,15 +878,38 @@
       h('tr',{},h('td',{},'Differenz (in-au)'),h('td',{colspan:2},diff)),
       h('tr',{},h('td',{},'Schwelle AN'),h('td',{colspan:2},thOn)),
       h('tr',{},h('td',{},'Schwelle AUS'),h('td',{colspan:2},thOff)),
+  h('tr',{},h('td',{},'Niedrigste Differenz eine Woche'),h('td',{colspan:2},minAvg3d)),
       h('tr',{},h('td',{},'Anzeige'),h('td',{colspan:2},active))
     );
     cont.appendChild(tbl);
     const form=h('form',{onsubmit:e=>{e.preventDefault();saveLueften(form);}});
-    const slider=h('input',{type:'range',min:1,max:5,value:level,name:'level',oninput:e=>{lvlVal.textContent='Stufe '+e.target.value;}});
+  const slider=h('input',{type:'range',min:1,max:10,value:level,name:'level',oninput:e=>{lvlVal.textContent='Stufe '+e.target.value;}});
+  if(mode==='auto'){ slider.disabled=true; slider.title='Automatische Kalibrierung aktiv'; }
     const lvlVal=h('span',{},'Stufe '+level);
     form.appendChild(h('label',{class:'field'},'Sensitivität LÜFTEN', slider, lvlVal));
+    const modeWrap=h('div',{class:'field'},
+      h('span',{},'Kalibrierung: '),
+      (function(){
+        const row=h('div',{class:'inline-btns mode-buttons'});
+        function make(label,val){
+          const active=(mode===val);
+          const btn=h('button',{type:'button','data-mode':val,class: active?'mini active':'mini',onclick:()=>{
+            // Visuellen Active-Status sofort umschalten
+            const btns=row.querySelectorAll('button'); btns.forEach(b=>{ b.classList.remove('active'); if(b.getAttribute('data-mode')===val) b.classList.add('active'); });
+            setLueftenMode(val);
+          }},label);
+          return btn;
+        }
+        row.appendChild(make('AUTO','auto'));
+        row.appendChild(make('MANUELL','manual'));
+        return row;
+      })()
+    );
+    form.appendChild(modeWrap);
   const actionsRow=h('div',{class:'actions'});
-  actionsRow.appendChild(h('button',{type:'submit'},'Speichern'));
+  const saveBtn=h('button',{type:'submit'},'Speichern');
+  if(mode==='auto'){ saveBtn.disabled=true; saveBtn.title='Im AUTO‑Modus wird automatisch kalibriert'; }
+  actionsRow.appendChild(saveBtn);
   // Aktualisieren Button (grau wie Info Buttons -> reuse btn-info class)
   actionsRow.appendChild(h('button',{type:'button',class:'btn-info',onclick:async()=>{ await refreshDashboard(true); render(); }},'Aktualisieren'));
   form.appendChild(actionsRow);
@@ -897,15 +922,21 @@
     try{
       await api('/api/settings/lueften?level='+encodeURIComponent(lvl),{method:'POST',body:String(lvl)});
     }catch(e){
-      // Fallback: nochmal nur mit Query ohne Body
       await api('/api/settings/lueften?level='+encodeURIComponent(lvl),{method:'POST'});
     }
-  await refreshDashboard(true);
-  render();
-  toast('Lüften Sensitivität aktualisiert');
+    toast('Lüften Sensitivität aktualisiert');
+    await refreshDashboard(true);
+    render();
+  }
+
+  async function setLueftenMode(mode){
+    await api('/api/settings/lueften-mode',{method:'POST',body:JSON.stringify({mode})});
+    toast('Kalibrierungsmodus: '+(mode==='auto'?'AUTO':'MANUELL'));
+    await refreshDashboard(true);
+    render();
   }
   function showWeatherInfo(){
-    const text=`Die Wetter Wörter REGEN, SCHNEE und WIND zeigen die erwarteten Wetterereignisse in den kommenden 3 Stunden für deinen Standort.\n\nDas Wort GIESSEN gilt den Gartenpflanzen. Es leuchtet auf, sofern es gestern nicht geregnet hat und draußen warm war und es heute ebenfalls draußen warm ist und nicht regnen wird.\n\nDas Wort LÜFTEN zeigt an, dass aktuell eine hohe gemessene Luftfeuchtigkeit im Innerraum vorliegt (zB durch Kochen, Duschen oder längeren Aufenthalt). Sofern die absolute Luftfeuchtigkeit draußen geringer ist als im Innenraum, leuchtet das Wort LÜFTEN. Dadurch kann die Luftqualität verbessert und zB Schimmelbildung im Innenraum vorgebeugt werden.\n\nSie können individuelle Farben für die jeweiligen Wörter einstellen oder diese deaktivieren.`;
+    const text=`Die Wetter Wörter REGEN, SCHNEE und WIND zeigen die erwarteten Wetterereignisse in den kommenden 3 Stunden für deinen Standort.\n\nDas Wort GIESSEN gilt den Gartenpflanzen. Es leuchtet auf, sofern es gestern nicht geregnet hat und draußen warm war und es heute ebenfalls draußen warm ist und nicht regnen wird.\n\nDas Wort LÜFTEN zeigt an, dass aktuell eine hohe gemessene Luftfeuchtigkeit im Innerraum vorliegt (zB durch Kochen, Duschen oder längeren Aufenthalt). Sofern die absolute Luftfeuchtigkeit draußen geringer ist als im Innenraum, leuchtet das Wort LÜFTEN. Dadurch kann die Luftqualität verbessert und zB Schimmelbildung im Innenraum vorgebeugt werden. Verwenden Sie den AUTO Kalibrierungsmodus um Sensorschwankungen vorzubeugen. Dabei wird der zeitlich gemittelte, niedrigste Differenzwert jede Woche ermittelt und nach Abschluss der Woche als neuer Referenzwert angewandet. Die Sensitivität-Stufe wird automatisch gesetzt. Dies kann anfänglich ungenau sein und erfordert eine Woche initiale Kalibrierzeit. Alternativ können Sie in der manuellen Kalibrierung die Sensitivität eigenständig festlegen.\n\nSie können individuelle Farben für die jeweiligen Wörter einstellen oder diese deaktivieren.`;
     const body=document.createElement('div');
     text.split(/\n\n/).forEach(p=>{ body.appendChild(document.createElement('p')).textContent=p; });
     showModal('Wetter Wörter Info', body);
