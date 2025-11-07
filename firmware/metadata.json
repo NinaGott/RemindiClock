@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.7.0",
+  "latest_version": "0.8.0",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "7E1527CD22F12488F4781437B6438E42E0B905DC22E61D9370D0C29338E0C553",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.7.0.txt",
-  "assets_manifest_sha256": "6F367CE3F29B5BC959AAD24780F9C347A86A6675F143AA9E3E8F112D14433474",
-  "changelog": "Automatische Kalibrierung der Sensitivität des Wortes LÜFTEN eingeführt. Einwöchiges Anlernen des Sensors für bessere Stabilität LÜFTEN. De-/Aktivierbar unter Einstellungen > Wetter."
+  "firmware_sha256": "02DEB4F2C226F124EC4C9B7C16F8AB0F23D7A5346F2508B64E996CC587880B47",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.8.0.txt",
+  "assets_manifest_sha256": "56BE83463904912DA509D7BA03400A9FFFDF926A7F02F277027005CE0E0A1020",
+  "changelog": "Korrektur lokale Zeit Schweiz. Verbesserung Wort LÜFTEN Kalibrierung und WLAN Einrichtung."
 }

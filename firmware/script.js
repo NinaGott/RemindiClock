@@ -360,7 +360,7 @@
     } else if(State.dashboard?.wasteIcalUrl){
       // Import läuft: bei langer Dauer Button zum erneuten Prüfen anzeigen
       const box=h('div',{class:'card'});
-      box.appendChild(h('p',{},'Import läuft...'));
+      box.appendChild(h('p',{},'Import läuft, bitte warten...'));
       const stuck = State.wasteImportStartedAt && (Date.now()-State.wasteImportStartedAt>90000);
       if(stuck){
         box.appendChild(h('p',{class:'small muted'},'Das dauert länger als üblich. Du kannst die Prüfung erneut starten.'));
@@ -1284,22 +1284,56 @@
   const data=Object.fromEntries(new FormData(form).entries());
   State.selectedSSID=data.ssid; State.wifiPassword=data.password;
     toast('Verbinde mit '+data.ssid+' ...','info');
-    try{ await fetch('/api/wifi/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch(_){/* ignorieren */}
+    let respJson=null;
+    try{
+      const r = await fetch('/api/wifi/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const ct=r.headers.get('content-type')||'';
+      if(ct.includes('application/json')) respJson = await r.json();
+    }catch(_){ /* ignorieren – wir haben unten Fallback */ }
+    const ip = respJson?.ip || 'remindiclock';
+    const host = (respJson?.hostname||'remindiclock').toLowerCase();
+    const mdns = (respJson?.mdns||host)+'.local';
+    try{ window.__lastWifi = { ip, host, mdns }; localStorage.setItem('rcLastIP', ip); }catch(_){}
     const note=h('div',{class:'card'},
       h('h3',{},'Verbindungsaufbau...'),
-      h('p',{},'Der ESP32 startet nun mit deinem WLAN neu. Diese Seite wird ggf. kurz nicht erreichbar sein.'),
-      h('p',{},'Versuche in 10-15 Sekunden: '),
+      h('p',{},'Das Gerät startet nun mit deinem WLAN neu. Diese Seite wird ggf. kurz nicht erreichbar sein.'),
+      h('p',{},'Öffne anschließend die Weboberfläche:'),
       h('ul',{},
-        h('li',{},'http://remindiclock (Hostname)'),
-        h('li',{},'http://remindiclock.local (mDNS, falls unterstützt)'),
-        h('li',{},'oder die IP-Adresse aus dem Router (DHCP-Liste)')
+        h('li',{}, 'IP: http://'+ip+'/'),
+        h('li',{}, 'Hostname: http://'+host+'/'),
+        h('li',{}, 'mDNS: http://'+mdns+'/ (falls unterstützt)')
       ),
-      h('p',{class:'small muted'},'Viele Android Geräte unterstützen mDNS nicht – verwende dann den Hostnamen oder die IP.')
+      h('div',{class:'actions'},
+        h('button',{onclick:()=>{ try{ location.href='http://'+ip+'/'; }catch(_){ } }}, 'Im Browser öffnen (IP)'),
+        h('button',{class:'secondary',onclick:()=>{ try{ location.href='http://'+host+'/'; }catch(_){ } }}, 'Hostname öffnen')
+      ),
+      h('p',{class:'small muted'},'Hinweis: Viele Android Geräte unterstützen mDNS nicht – verwende dann Hostname oder IP.')
     );
     app.innerHTML=''; app.appendChild(note);
-  // Erst Hostname ohne .local, dann Fallback auf .local nach weiteren 5s falls Seite noch offen
-  setTimeout(()=>{ try{ window.location.href='http://remindiclock/'; }catch(_){ } },10000);
-  setTimeout(()=>{ if(document.visibilityState!=='hidden') { try{ window.location.href='http://remindiclock.local/'; }catch(_){ } } },15000);
+    // Show a modal with quick actions as well
+    try{
+      const cont=h('div',{},
+        h('p',{},'Gerät startet neu und verbindet sich mit deinem WLAN. Danach kannst du es hier öffnen:'),
+        h('ul',{},
+          h('li',{}, 'IP: http://'+ip+'/'),
+          h('li',{}, 'Hostname: http://'+host+'/'),
+          h('li',{}, 'mDNS: http://'+mdns+'/ (falls unterstützt)')
+        ),
+        h('div',{class:'actions'},
+          h('button',{onclick:()=>{ try{ location.href='http://'+ip+'/'; }catch(_){ } }}, 'Im Browser öffnen (IP)'),
+          h('button',{class:'secondary',onclick:()=>{ try{ location.href='http://'+host+'/'; }catch(_){ } }}, 'Hostname öffnen')
+        )
+      );
+      showModal('Weiter im Heimnetz', cont);
+    }catch(_){ }
+    // Automatische Weiterleitung: zuerst IP (zuverlässig), dann Hostname, dann .local
+    const ua=(navigator.userAgent||'').toLowerCase();
+    const inCaptive = /captive|connectivity|portal/.test(ua);
+    if(!inCaptive){
+      setTimeout(()=>{ if(document.visibilityState!=='hidden'){ try{ window.location.href='http://'+ip+'/'; }catch(_){ } } }, 8000);
+      setTimeout(()=>{ if(document.visibilityState!=='hidden'){ try{ window.location.href='http://'+host+'/'; }catch(_){ } } }, 12000);
+      setTimeout(()=>{ if(document.visibilityState!=='hidden'){ try{ window.location.href='http://'+mdns+'/'; }catch(_){ } } }, 16000);
+    }
   }
   async function saveAddress(form){
   const data={ postalCode:State.addrPostal, city:State.addrCity, country:State.addrCountry };
