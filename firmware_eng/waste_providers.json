@@ -1,0 +1,168 @@
+[
+  {
+    "name": "BSR Berlin",
+    "url": "https://www.bsr.de/abfuhrkalender-20594.php",
+    "city_patterns": ["berlin"],
+    "plz_prefixes": ["101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "120", "121", "122", "123", "124", "125", "126", "130", "131", "135", "136", "140", "141"]
+  },
+  {
+    "name": "AWM München",
+    "url": "https://www.awm-muenchen.de/abfall/abfuhrkalender",
+    "city_patterns": ["münchen", "munchen"],
+    "plz_prefixes": ["80", "81"]
+  },
+  {
+    "name": "Stadtreinigung Hamburg",
+    "url": "https://www.stadtreinigung.hamburg/abfuhrkalender",
+    "city_patterns": ["hamburg"],
+    "plz_prefixes": ["20", "21", "22", "23"]
+  },
+  {
+    "name": "AWB Köln",
+    "url": "https://www.awbkoeln.de/privathaushalte/abfallentsorgung/abfuhrtermine/",
+    "city_patterns": ["köln", "koln"],
+    "plz_prefixes": ["50"]
+  },
+  {
+    "name": "FES Frankfurt",
+    "url": "https://www.fes-frankfurt.de/privatkunden/entsorgung/tonnenservice/abfallkalender",
+    "city_patterns": ["frankfurt"],
+    "plz_prefixes": ["60"]
+  },
+  {
+    "name": "AWRM Rems-Murr-Kreis",
+    "url": "https://www.abfallwirtschaft-rems-murr.de/muell-entsorgen/ihr-abfallkalender",
+    "city_patterns": [
+      "waiblingen","winnenden","weinstadt","schorndorf","backnang",
+      "remshalden","rudersberg","welzheim","plüderhausen","pluederhausen",
+      "urbach","kaisersbach","berglen","burgstetten","oppenweiler",
+      "aspach","weissach","weissach im tal","murrhardt","leutenbach",
+      "kernen","korb","allmersbach","auenwald","sulzbach","großerlach","grosserlach","spiegelberg","schwaikheim"
+    ],
+    "plz_prefixes": ["713","714","715","736"]
+  },
+  {
+    "name": "AWS Stuttgart",
+    "url": "https://www.stuttgart.de/abfall/abfuhrtermine",
+    "city_patterns": ["stuttgart"],
+    "plz_prefixes": ["70", "71"]
+  },
+  {
+    "name": "Abfallwirtschaft Landkreis Reutlingen",
+    "url": "https://www.kreis-reutlingen.de/abfalltermine-und-leerungen",
+    "city_patterns": [
+      "eningen",
+      "eningen unter achalm",
+      "reutlingen",
+      "pfullingen",
+      "metzingen",
+      "bad urach",
+      "dettingen",
+      "münsingen",
+      "muensingen"
+    ],
+    "plz_prefixes": ["727", "728"]
+  },
+  {
+    "name": "AWISTA Düsseldorf",
+    "url": "https://www.awista.de/abfuhrkalender/",
+    "city_patterns": ["düsseldorf", "dusseldorf"],
+    "plz_prefixes": ["40", "41"]
+  },
+  {
+    "name": "EDG Dortmund",
+    "url": "https://www.edg.de/de/abfallentsorgung/abfuhrtermine",
+    "city_patterns": ["dortmund"],
+    "plz_prefixes": ["44"]
+  },
+  {
+    "name": "SRL Leipzig",
+    "url": "https://www.stadtreinigung-leipzig.de/abfall/abfallkalender",
+    "city_patterns": ["leipzig"],
+    "plz_prefixes": ["04"]
+  },
+  {
+    "name": "SRD Dresden",
+    "url": "https://www.dresden.de/abfallkalender",
+    "city_patterns": ["dresden"],
+    "plz_prefixes": ["01"]
+  },
+  {
+    "name": "ZKE Saarbrücken",
+    "url": "https://www.zke-sb.de/abfall/abfuhrtermine",
+    "city_patterns": ["saarbrücken", "saarbrucken"],
+    "plz_prefixes": ["66"]
+  },
+  {
+    "name": "ASF Freiburg",
+    "url": "https://www.abfallwirtschaft-freiburg.de/abfuhrtermine",
+    "city_patterns": ["freiburg"],
+    "plz_prefixes": ["79"]
+  },
+  {
+    "name": "GMZ Hannover",
+    "url": "https://www.hannover.de/Leben-in-der-Region-Hannover/Umwelt-Nachhaltigkeit/Abfall/Abfuhrtermine",
+    "city_patterns": ["hannover"],
+    "plz_prefixes": ["30", "31"]
+  },
+  {
+    "name": "AHO Oldenburg",
+    "url": "https://www.oldenburg.de/startseite/leben-wohnen/umwelt/abfall/abfuhrkalender.html",
+    "city_patterns": ["oldenburg"],
+    "plz_prefixes": ["26"]
+  },
+  {
+    "name": "SWM Magdeburg",
+    "url": "https://www.stadtmagdeburg.de/Start/Wirtschaft/Wirtschaftsstandort/Abfallentsorgung/Abfallkalender/",
+    "city_patterns": ["magdeburg"],
+    "plz_prefixes": ["39"]
+  },
+  {
+    "name": "EB Jena",
+    "url": "https://www.jena.de/leben/abfall/abfallkalender",
+    "city_patterns": ["jena"],
+    "plz_prefixes": ["07"]
+  },
+  {
+    "name": "Abfallwirtschaft Bodenseekreis",
+    "url": "https://www.bodenseekreis.de/umwelt-landnutzung/abfallentsorgung-privat/termine/abfuhrkalender/",
+    "city_patterns": [
+      "bodenseekreis",
+      "friedrichshafen",
+      "überlingen","ueberlingen",
+      "tettnang",
+      "meersburg",
+      "markdorf",
+      "bermatingen",
+      "kressbronn",
+      "langenargen",
+      "salem",
+      "meckenbeuren",
+  "immenstaad","imnstadt","immenstadt"
+    ],
+    "plz_prefixes": ["880","886","887"]
+  },
+  { "name": "AWS Bremen", "url": "https://www.entsorgung-kommunal-bremen.de/abfallkalender/", "city_patterns": ["bremen"], "plz_prefixes": ["281","282","283","287"] },
+  { "name": "ASN Nürnberg/Fürth/Erlangen", "url": "https://www.nuernberg.de/internet/abfallwirtschaft/abfuhrkalender.html", "city_patterns": ["nürnberg","nuernberg","fürth","fuerth","erlangen"], "plz_prefixes": ["904","905","907","910"] },
+  { "name": "EBE Essen", "url": "https://www.ebe-essen.de/abfallkalender/", "city_patterns": ["essen"], "plz_prefixes": ["451","452","453"] },
+  { "name": "USB Bochum", "url": "https://www.usb-bochum.de/service/abfuhrtermine/", "city_patterns": ["bochum"], "plz_prefixes": ["447","448"] },
+  { "name": "ESW Wuppertal", "url": "https://www.eswuppertal.de/abfall/abfallkalender/", "city_patterns": ["wuppertal"], "plz_prefixes": ["421","422","423"] },
+  { "name": "Bonner Stadtreinigung", "url": "https://www.bonnorange.de/abfallkalender/", "city_patterns": ["bonn"], "plz_prefixes": ["531","532"] },
+  { "name": "EB Mannheim", "url": "https://www.mannheim.de/de/service-bieten/umwelt/abfall/abfallkalender", "city_patterns": ["mannheim"], "plz_prefixes": ["681","682"] },
+  { "name": "ASW Karlsruhe", "url": "https://www.karlsruhe.de/b3/umwelt/abfall/abfuhrkalender.de", "city_patterns": ["karlsruhe"], "plz_prefixes": ["761","762"] },
+  { "name": "ELW Wiesbaden", "url": "https://www.elw.de/abfall/abfallkalender/", "city_patterns": ["wiesbaden"], "plz_prefixes": ["651"] },
+  { "name": "AWS Münster", "url": "https://www.awm.muenster.de/abfallwirtschaft/abfuhrtermine", "city_patterns": ["münster","muenster"], "plz_prefixes": ["481"] },
+  { "name": "AWS Augsburg", "url": "https://www.augsburg.de/umwelt-soziales/umwelt/abfall/abfallkalender", "city_patterns": ["augsburg"], "plz_prefixes": ["861"] },
+  { "name": "ASEAG Aachen", "url": "https://www.aachen.de/de/stadt_buerger/planen_bauen/abfall/abfuhrkalender.html", "city_patterns": ["aachen"], "plz_prefixes": ["520"] },
+  { "name": "ALBA Braunschweig", "url": "https://www.braunschweig.de/leben/stadtplan_verkehr/entsorgung/abfallkalender.php", "city_patterns": ["braunschweig"], "plz_prefixes": ["381"] },
+  { "name": "ABK Kiel", "url": "https://www.abki.de/abfuhrtermine/", "city_patterns": ["kiel"], "plz_prefixes": ["241"] },
+  { "name": "EBL Lübeck", "url": "https://www.luebeck.de/de/leben-in-luebeck/abfall/abfuhrtermine.html", "city_patterns": ["lübeck","lubeck"], "plz_prefixes": ["235"] },
+  { "name": "StAR Rostock", "url": "https://www.stadt-rostock.de/leben/umwelt/abfall/abfuhrkalender", "city_patterns": ["rostock"], "plz_prefixes": ["180"] },
+  { "name": "SAE Erfurt", "url": "https://www.erfurt.de/ef/de/leben/umwelt/abfall/abfallkalender/index.html", "city_patterns": ["erfurt"], "plz_prefixes": ["990","991"] },
+  { "name": "STEP Potsdam", "url": "https://www.potsdam.de/abfallkalender", "city_patterns": ["potsdam"], "plz_prefixes": ["144"] },
+  { "name": "AWS Kassel", "url": "https://www.kassel.de/abfallkalender", "city_patterns": ["kassel"], "plz_prefixes": ["341"] },
+  { "name": "ABS Bielefeld", "url": "https://www.bielefeld.de/themen/umwelt-und-klima/abfallentsorgung/abfallkalender", "city_patterns": ["bielefeld"], "plz_prefixes": ["336","337"] },
+  { "name": "ASF Regensburg", "url": "https://www.regensburg.de/wir/umwelt/abfallentsorgung/abfallkalender", "city_patterns": ["regensburg"], "plz_prefixes": ["930","931"] },
+  { "name": "AWB Heidelberg", "url": "https://www.heidelberg.de/hd/HD/Leben/Abfallkalender.html", "city_patterns": ["heidelberg"], "plz_prefixes": ["691"] },
+  { "name": "EB Mainz", "url": "https://www.mainz.de/leben-und-arbeit/umwelt-und-nachhaltigkeit/abfallwirtschaft/abfallkalender.php", "city_patterns": ["mainz"], "plz_prefixes": ["551"] }
+]
