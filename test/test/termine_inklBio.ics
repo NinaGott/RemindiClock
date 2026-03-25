@@ -1,0 +1,628 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+X-WR-CALNAME:Digitaler Umweltkalender
+PRODID:-//Digitaler Umweltkalender von Verl.de der Stadt Verl//iCal 2.0//EN
+X-WR-TIMEZONE:Europe/Berlin
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260325
+UID:ve-at-260012
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260326
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260325
+UID:ve-at-260022
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260326
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260331
+UID:ve-at-260032
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260401
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260409
+UID:ve-at-260042
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260410
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260409
+UID:ve-at-260052
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260410
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260415
+UID:ve-at-260062
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260416
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260422
+UID:ve-at-260072
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260423
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260422
+UID:ve-at-260082
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260423
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260429
+UID:ve-at-260092
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260430
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260506
+UID:ve-at-260102
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260507
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260506
+UID:ve-at-260112
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260507
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260513
+UID:ve-at-260122
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260514
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260520
+UID:ve-at-260132
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260521
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260520
+UID:ve-at-260142
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260521
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260528
+UID:ve-at-260152
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260529
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260603
+UID:ve-at-260162
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260604
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260603
+UID:ve-at-260172
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260604
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260610
+UID:ve-at-260182
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260611
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260617
+UID:ve-at-260192
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260618
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260617
+UID:ve-at-260202
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260618
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260624
+UID:ve-at-260212
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260625
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260701
+UID:ve-at-260222
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260702
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260701
+UID:ve-at-260232
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260702
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260708
+UID:ve-at-260242
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260709
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260715
+UID:ve-at-260252
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260716
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260715
+UID:ve-at-260262
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260716
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260722
+UID:ve-at-260272
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260723
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260729
+UID:ve-at-260282
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260730
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260729
+UID:ve-at-260292
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260730
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260805
+UID:ve-at-260302
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260806
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260812
+UID:ve-at-260312
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260813
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260812
+UID:ve-at-260322
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260813
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260819
+UID:ve-at-260332
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260820
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260826
+UID:ve-at-260342
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260827
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260826
+UID:ve-at-260352
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260827
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260902
+UID:ve-at-260362
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20260903
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260909
+UID:ve-at-260372
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260910
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260909
+UID:ve-at-260382
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20260910
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260916
+UID:ve-at-260392
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20260917
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260923
+UID:ve-at-260402
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20260924
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260923
+UID:ve-at-260412
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20260924
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20260930
+UID:ve-at-260422
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20261001
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261007
+UID:ve-at-260432
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261008
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261007
+UID:ve-at-260442
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20261008
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261014
+UID:ve-at-260452
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20261015
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261021
+UID:ve-at-260462
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20261022
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261021
+UID:ve-at-260472
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261022
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261028
+UID:ve-at-260482
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20261029
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261104
+UID:ve-at-260492
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261105
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261104
+UID:ve-at-260502
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20261105
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261111
+UID:ve-at-260512
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20261112
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261118
+UID:ve-at-260522
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261119
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261118
+UID:ve-at-260532
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20261119
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261125
+UID:ve-at-260542
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20261126
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261202
+UID:ve-at-260552
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261203
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261202
+UID:ve-at-260562
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20261203
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261209
+UID:ve-at-260572
+SUMMARY:Restmülltonne/mögliche Zusatzleerung
+DTEND;VALUE=DATE:20261210
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne/mögliche Zusatzleerung im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261216
+UID:ve-at-260582
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261217
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261216
+UID:ve-at-260592
+SUMMARY:Gelbe Tonne
+DTEND;VALUE=DATE:20261217
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Gelbe Tonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261222
+UID:ve-at-260602
+SUMMARY:Restmülltonne
+DTEND;VALUE=DATE:20261223
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Restmülltonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261230
+UID:ve-at-260612
+SUMMARY:biotonne
+DTEND;VALUE=DATE:20261231
+SEQUENCE:1
+DESCRIPTION:Abfuhr der biotonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+BEGIN:VEVENT
+LOCATION:Abfuhrbezirk 2
+DTSTAMP;VALUE=DATE:20260324T182331
+DTSTART;VALUE=DATE:20261230
+UID:ve-at-260622
+SUMMARY:Papiertonne
+DTEND;VALUE=DATE:20261231
+SEQUENCE:1
+DESCRIPTION:Abfuhr der Papiertonne im Abfuhrbezirk 2. Die Behältnisse müssen am Abholtag ab 6.00 Uhr bereitstehen!
+END:VEVENT
+END:VCALENDAR
