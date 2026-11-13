@@ -136,3 +136,7 @@ button.loading:after{content:'⏳';font-size:.8em;margin-left:.4em}
 .pw-wrap input{padding-right:44px}
 .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:#25313d;border:1px solid #304253;border-radius:8px;width:34px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:1rem}
 .pw-toggle:hover{background:#2d3a46}
+
+/* Footer (wizard + dashboard) */
+footer{margin:1.25rem auto 0;text-align:center;opacity:.75;font-size:.75rem;line-height:1.35;padding:.25rem 0 1rem}
+footer .legal{display:block;margin:.35rem auto 0;max-width:720px;font-size:.65rem;opacity:.85}

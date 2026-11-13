@@ -48,6 +48,22 @@
     "plz_prefixes": ["70", "71"]
   },
   {
+    "name": "Abfallwirtschaft Landkreis Reutlingen",
+    "url": "https://www.kreis-reutlingen.de/abfalltermine-und-leerungen",
+    "city_patterns": [
+      "eningen",
+      "eningen unter achalm",
+      "reutlingen",
+      "pfullingen",
+      "metzingen",
+      "bad urach",
+      "dettingen",
+      "münsingen",
+      "muensingen"
+    ],
+    "plz_prefixes": ["727", "728"]
+  },
+  {
     "name": "AWISTA Düsseldorf",
     "url": "https://www.awista.de/abfuhrkalender/",
     "city_patterns": ["düsseldorf", "dusseldorf"],

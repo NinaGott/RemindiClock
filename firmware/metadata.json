@@ -1,9 +1,9 @@
 {
   "update_available": true,
-  "latest_version": "0.8.0",
+  "latest_version": "1.0.0",
   "download_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/firmware.bin",
-  "firmware_sha256": "02DEB4F2C226F124EC4C9B7C16F8AB0F23D7A5346F2508B64E996CC587880B47",
-  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-0.8.0.txt",
-  "assets_manifest_sha256": "56BE83463904912DA509D7BA03400A9FFFDF926A7F02F277027005CE0E0A1020",
-  "changelog": "Korrektur lokale Zeit Schweiz. Verbesserung Wort LÜFTEN Kalibrierung und WLAN Einrichtung."
+  "firmware_sha256": "C59D4EDDC5C292E93292279BA6F4AB756DDA862DB69136D4538CD5FF7CE994FA",
+  "assets_manifest_url": "https://raw.githubusercontent.com/NinaGott/RemindiClock/main/firmware/manifest-1.0.0.txt",
+  "assets_manifest_sha256": "5B941DB318DBC7BBF74CDD1249AF1D3A8414D7237D1890D8524CF3B4196D3114",
+  "changelog": "ics Abfallkalender-Datei Upload hinzugefügt. Optional Wort UHR nur zur vollen Stunde."
 }
